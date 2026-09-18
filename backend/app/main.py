@@ -23,6 +23,7 @@ app.add_middleware(
 )
 
 MEDIA_PATH = os.getenv("MEDIA_PATH", "/data")
+STATIC_PATH = os.getenv("STATIC_PATH", "static")
 
 init_db()
 
@@ -31,16 +32,6 @@ app.mount(
     StaticFiles(directory=MEDIA_PATH),
     name="media",
 )
-
-
-@app.get("/")
-def root():
-    return {
-        "name": "Pokédex Backend",
-        "version": "0.1.0",
-        "status": "online",
-        "docs": "/docs",
-    }
 
 
 @app.get("/health")
@@ -165,3 +156,10 @@ def count():
 
     finally:
         db.close()
+
+
+app.mount(
+    "/",
+    StaticFiles(directory=STATIC_PATH, html=True),
+    name="frontend",
+)
