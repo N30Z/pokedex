@@ -10,8 +10,8 @@ from sqlalchemy.orm import sessionmaker
 
 sys.path.insert(0, "/backend")
 
+from app.database import sync_schema
 from app.models import (
-    Base,
     PokemonSpecies,
     Pokemon,
     PokemonForm,
@@ -44,7 +44,7 @@ engine = create_engine(
 
 SessionLocal = sessionmaker(bind=engine)
 
-Base.metadata.create_all(engine)
+sync_schema(engine)
 
 
 # ---------------------------------------------------------
