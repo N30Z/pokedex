@@ -1,13 +1,16 @@
 services:
   pokedex:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: pokedex-backend
     restart: unless-stopped
     ports:
       - "1510:1510"
     volumes:
       - ./data:/data
-      - ./backend/app:/backend
+      - ./backend/app:/app/app
+      - ./frontend:/app/static
     environment:
       TZ: Europe/Berlin
       DATABASE_PATH: /data/pokedex.db

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pokédex</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Pokédex</h1>
+    <input
+      id="search"
+      type="search"
+      placeholder="Pokémon suchen (Name, deutscher Name oder ID)…"
+      autocomplete="off"
+    />
+  </header>
+
+  <main>
+    <p id="status" class="status"></p>
+    <div id="grid" class="grid"></div>
+    <button id="load-more" class="load-more" hidden>Mehr laden</button>
+  </main>
+
+  <div id="modal" class="modal-overlay" hidden>
+    <div class="modal">
+      <button id="modal-close" class="modal-close" aria-label="Schließen">×</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
