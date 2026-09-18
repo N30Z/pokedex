@@ -10,7 +10,13 @@ from sqlalchemy.orm import sessionmaker
 
 sys.path.insert(0, "/backend")
 
-from app.models import Base, PokemonSpecies, Pokemon, PokemonForm
+from app.models import (
+    Base,
+    PokemonSpecies,
+    Pokemon,
+    PokemonForm,
+    SpeciesEvolution,
+)
 
 
 API = "https://pokeapi.co/api/v2"
@@ -198,6 +204,103 @@ def safe_filename(name):
     )
 
 
+def get_localized_short_effect(data, language="de"):
+    for entry in data.get("effect_entries", []):
+        if entry.get("language", {}).get("name") == language:
+            return entry.get("short_effect")
+
+    return None
+
+
+# ---------------------------------------------------------
+# Cached lookups for shared/enum-like PokeAPI resources
+# ---------------------------------------------------------
+
+COLOR_CACHE = {}
+SHAPE_CACHE = {}
+HABITAT_CACHE = {}
+GROWTH_RATE_CACHE = {}
+ABILITY_CACHE = {}
+TYPE_CACHE = {}
+
+STAT_NAMES_DE = {
+    "hp": "KP",
+    "attack": "Angriff",
+    "defense": "Verteidigung",
+    "special-attack": "Sp. Angriff",
+    "special-defense": "Sp. Verteidigung",
+    "speed": "Initiative",
+}
+
+
+async def get_localized_resource_name(client, cache, endpoint, slug):
+    if not slug:
+        return None
+
+    if slug in cache:
+        return cache[slug]
+
+    data = await get_json(client, f"{API}/{endpoint}/{slug}")
+
+    name_de = get_localized_name(data) if data else None
+
+    cache[slug] = name_de
+
+    return name_de
+
+
+async def get_ability_de(client, slug):
+    if not slug:
+        return None
+
+    if slug in ABILITY_CACHE:
+        return ABILITY_CACHE[slug]
+
+    data = await get_json(client, f"{API}/ability/{slug}")
+
+    result = {
+        "name_de": get_localized_name(data) if data else None,
+        "effect_de": (
+            get_localized_description(data)
+            or get_localized_short_effect(data)
+        )
+        if data
+        else None,
+    }
+
+    ABILITY_CACHE[slug] = result
+
+    return result
+
+
+async def get_type_damage_relations(client, slug):
+    if not slug:
+        return None
+
+    if slug in TYPE_CACHE:
+        return TYPE_CACHE[slug]
+
+    data = await get_json(client, f"{API}/type/{slug}")
+
+    relations = (data or {}).get("damage_relations", {})
+
+    result = {
+        "double_damage_from": [
+            t["name"] for t in relations.get("double_damage_from", [])
+        ],
+        "half_damage_from": [
+            t["name"] for t in relations.get("half_damage_from", [])
+        ],
+        "no_damage_from": [
+            t["name"] for t in relations.get("no_damage_from", [])
+        ],
+    }
+
+    TYPE_CACHE[slug] = result
+
+    return result
+
+
 # ---------------------------------------------------------
 # Species
 # ---------------------------------------------------------
@@ -277,17 +380,33 @@ async def import_species(
         species_data.get("color") or {}
     ).get("name")
 
+    species.color_de = await get_localized_resource_name(
+        client, COLOR_CACHE, "pokemon-color", species.color
+    )
+
     species.shape = (
         species_data.get("shape") or {}
     ).get("name")
+
+    species.shape_de = await get_localized_resource_name(
+        client, SHAPE_CACHE, "pokemon-shape", species.shape
+    )
 
     species.habitat = (
         species_data.get("habitat") or {}
     ).get("name")
 
+    species.habitat_de = await get_localized_resource_name(
+        client, HABITAT_CACHE, "pokemon-habitat", species.habitat
+    )
+
     species.growth_rate = (
         species_data.get("growth_rate") or {}
     ).get("name")
+
+    species.growth_rate_de = await get_localized_resource_name(
+        client, GROWTH_RATE_CACHE, "growth-rate", species.growth_rate
+    )
 
     evolution_chain = species_data.get(
         "evolution_chain"
@@ -350,39 +469,44 @@ async def import_pokemon(
         pokemon_data.get("weight", 0) / 10
     )
 
-    pokemon.types = json.dumps(
-        [
+    type_entries = []
+
+    for entry in pokemon_data.get("types", []):
+        type_name = entry["type"]["name"]
+        relations = await get_type_damage_relations(client, type_name)
+
+        type_entries.append(
             {
                 "slot": entry["slot"],
-                "name": entry["type"]["name"],
+                "name": type_name,
+                **(relations or {}),
             }
-            for entry in pokemon_data.get(
-                "types",
-                [],
-            )
-        ],
-        ensure_ascii=False,
-    )
+        )
 
-    pokemon.abilities = json.dumps(
-        [
+    pokemon.types = json.dumps(type_entries, ensure_ascii=False)
+
+    ability_entries = []
+
+    for entry in pokemon_data.get("abilities", []):
+        ability_name = entry["ability"]["name"]
+        ability_de = await get_ability_de(client, ability_name)
+
+        ability_entries.append(
             {
-                "name": entry["ability"]["name"],
+                "name": ability_name,
                 "hidden": entry["is_hidden"],
                 "slot": entry["slot"],
+                **(ability_de or {}),
             }
-            for entry in pokemon_data.get(
-                "abilities",
-                [],
-            )
-        ],
-        ensure_ascii=False,
-    )
+        )
+
+    pokemon.abilities = json.dumps(ability_entries, ensure_ascii=False)
 
     pokemon.stats = json.dumps(
         [
             {
                 "name": entry["stat"]["name"],
+                "name_de": STAT_NAMES_DE.get(entry["stat"]["name"]),
                 "value": entry["base_stat"],
                 "effort": entry["effort"],
             }
@@ -520,6 +644,86 @@ async def import_pokemon(
 
 
 # ---------------------------------------------------------
+# Evolution chains
+# ---------------------------------------------------------
+
+def flatten_evolution_chain(node, edges=None):
+    edges = [] if edges is None else edges
+
+    from_species_id = extract_id_from_url(
+        node.get("species", {}).get("url")
+    )
+
+    for evo in node.get("evolves_to", []):
+        to_species_id = extract_id_from_url(
+            evo.get("species", {}).get("url")
+        )
+
+        seen = set()
+
+        for detail in evo.get("evolution_details") or [{}]:
+            key = (
+                (detail.get("trigger") or {}).get("name"),
+                detail.get("min_level"),
+                (detail.get("item") or {}).get("name"),
+                detail.get("min_happiness"),
+            )
+
+            if key in seen:
+                continue
+
+            seen.add(key)
+
+            edges.append(
+                {
+                    "from_species_id": from_species_id,
+                    "to_species_id": to_species_id,
+                    "trigger": key[0],
+                    "min_level": key[1],
+                    "item": key[2],
+                    "min_happiness": key[3],
+                    "details": detail,
+                }
+            )
+
+        flatten_evolution_chain(evo, edges)
+
+    return edges
+
+
+async def import_evolution_chain(client, db, chain_id):
+    chain_data = await get_json(
+        client,
+        f"{API}/evolution-chain/{chain_id}/",
+    )
+
+    if not chain_data:
+        return
+
+    edges = flatten_evolution_chain(chain_data.get("chain", {}))
+
+    db.query(SpeciesEvolution).filter(
+        SpeciesEvolution.chain_id == chain_id
+    ).delete()
+
+    for edge in edges:
+        db.add(
+            SpeciesEvolution(
+                chain_id=chain_id,
+                from_species_id=edge["from_species_id"],
+                to_species_id=edge["to_species_id"],
+                trigger=edge["trigger"],
+                min_level=edge["min_level"],
+                item=edge["item"],
+                min_happiness=edge["min_happiness"],
+                details=json.dumps(edge["details"], ensure_ascii=False),
+            )
+        )
+
+    db.commit()
+
+
+# ---------------------------------------------------------
 # Main
 # ---------------------------------------------------------
 
@@ -555,6 +759,7 @@ async def main():
         )
 
         db = SessionLocal()
+        evolution_chain_ids = set()
 
         try:
 
@@ -599,6 +804,11 @@ async def main():
                     db,
                     species_data,
                 )
+
+                if species.evolution_chain_id:
+                    evolution_chain_ids.add(
+                        species.evolution_chain_id
+                    )
 
                 # -----------------------------------------
                 # ALLE VARIETIES
@@ -645,6 +855,31 @@ async def main():
 
                 # Sicherung nach jeder Species
                 db.commit()
+
+            # ---------------------------------------------
+            # Entwicklungsketten
+            # ---------------------------------------------
+
+            print()
+            print(
+                f"Lade {len(evolution_chain_ids)} "
+                "Entwicklungsketten..."
+            )
+
+            for index, chain_id in enumerate(
+                sorted(evolution_chain_ids),
+                start=1,
+            ):
+                print(
+                    f"[{index}/{len(evolution_chain_ids)}] "
+                    f"Kette #{chain_id}"
+                )
+
+                await import_evolution_chain(
+                    client,
+                    db,
+                    chain_id,
+                )
 
         finally:
             db.close()

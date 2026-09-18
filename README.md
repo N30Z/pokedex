@@ -30,7 +30,7 @@ Data and media are persisted to `./data` on the host.
 The web UI, JSON API, and media are all served from the same port (1510). The JSON API lives under `/api`, with interactive docs at `/docs`.
 
 - `GET /api/pokemon?search=&limit=&offset=` — list/search default Pokémon forms (paginated, `limit` max 100). `search` matches either the English or German name.
-- `GET /api/pokemon/{identifier}` — fetch a single Pokémon by numeric ID, English name, or exact German name.
+- `GET /api/pokemon/{identifier}` — fetch a single Pokémon by numeric ID, English name, or exact German name. Includes base stats, type matchups (`double_damage_from`/`half_damage_from`/`no_damage_from` per type, for computing a weakness chart), abilities with German names/effects, species traits (color, shape, habitat, growth rate, gender ratio, egg cycles), and `evolves_from`/`evolves_to` evolution chain data.
 - `GET /api/count` — total number of Pokémon in the database.
 - `GET /media/...` — serves downloaded sprites (`sprites/`), shiny sprites (`shiny/`), and cries (`cries/`).
 
