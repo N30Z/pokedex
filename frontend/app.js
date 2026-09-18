@@ -1,6 +1,40 @@
 const API_BASE_URL = window.API_BASE_URL || "";
 const PAGE_SIZE = 40;
 
+const TYPE_NAMES_DE = {
+  normal: "Normal",
+  fighting: "Kampf",
+  flying: "Flug",
+  poison: "Gift",
+  ground: "Boden",
+  rock: "Gestein",
+  bug: "Käfer",
+  ghost: "Geist",
+  steel: "Stahl",
+  fire: "Feuer",
+  water: "Wasser",
+  grass: "Pflanze",
+  electric: "Elektro",
+  psychic: "Psycho",
+  ice: "Eis",
+  dragon: "Drache",
+  dark: "Unlicht",
+  fairy: "Fee",
+  stellar: "Stellar",
+  unknown: "Unbekannt",
+};
+
+function typeNameDe(type) {
+  return TYPE_NAMES_DE[type.name] || type.name;
+}
+
+function formatAbilityName(name) {
+  return name
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 const grid = document.getElementById("grid");
 const statusEl = document.getElementById("status");
 const searchInput = document.getElementById("search");
@@ -51,7 +85,7 @@ function createCard(pokemon) {
 
   const sprite = mediaUrl(pokemon.sprite);
   const typeBadges = (pokemon.types || [])
-    .map((t) => `<span class="type-badge">${t.name}</span>`)
+    .map((t) => `<span class="type-badge">${typeNameDe(t)}</span>`)
     .join("");
 
   card.innerHTML = `
@@ -81,11 +115,14 @@ async function openDetail(identifier) {
     const cry = mediaUrl(p.cry);
 
     const typeBadges = (p.types || [])
-      .map((t) => `<span class="type-badge">${t.name}</span>`)
+      .map((t) => `<span class="type-badge">${typeNameDe(t)}</span>`)
       .join("");
 
     const abilities = (p.abilities || [])
-      .map((a) => `<li>${a.name}${a.hidden ? " (versteckt)" : ""}</li>`)
+      .map(
+        (a) =>
+          `<li>${formatAbilityName(a.name)}${a.hidden ? " (versteckt)" : ""}</li>`
+      )
       .join("");
 
     const flags = [];
