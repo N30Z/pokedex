@@ -141,11 +141,15 @@ main {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   padding: 1rem;
   z-index: 10;
+}
+
+.modal-overlay:not([hidden]) {
+  display: flex;
 }
 
 .modal {
@@ -234,4 +238,86 @@ main {
   background: var(--accent);
   color: #1a1a1a;
   font-weight: 600;
+}
+
+.stat-bar-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 32px;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.35rem;
+}
+
+.stat-bar-track {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  height: 8px;
+}
+
+.stat-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-2), var(--accent));
+  border-radius: 999px;
+}
+
+.stat-bar-value {
+  text-align: right;
+  color: var(--muted);
+}
+
+.effectiveness-row {
+  margin-bottom: 0.5rem;
+}
+
+.effectiveness-label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 0.2rem;
+}
+
+.evolution-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.evolution-entry {
+  text-align: center;
+  padding: 0.5rem;
+  border-radius: var(--radius);
+}
+
+.evolution-entry.clickable {
+  cursor: pointer;
+}
+
+.evolution-entry.clickable:hover {
+  background: var(--surface-hover);
+}
+
+.evolution-entry img {
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+}
+
+.evolution-name {
+  margin: 0.2rem 0 0;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.evolution-condition {
+  margin: 0.1rem 0 0;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.evolution-arrow {
+  color: var(--muted);
+  font-size: 1.2rem;
 }

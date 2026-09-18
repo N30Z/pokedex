@@ -25,9 +25,13 @@ class PokemonSpecies(Base):
     baby: Mapped[bool] = mapped_column(Boolean, default=False)
 
     color: Mapped[str | None] = mapped_column(String(50))
+    color_de: Mapped[str | None] = mapped_column(String(50))
     shape: Mapped[str | None] = mapped_column(String(50))
+    shape_de: Mapped[str | None] = mapped_column(String(50))
     habitat: Mapped[str | None] = mapped_column(String(50))
+    habitat_de: Mapped[str | None] = mapped_column(String(50))
     growth_rate: Mapped[str | None] = mapped_column(String(50))
+    growth_rate_de: Mapped[str | None] = mapped_column(String(100))
 
     evolution_chain_id: Mapped[int | None] = mapped_column(Integer)
 
@@ -96,3 +100,25 @@ class PokemonForm(Base):
     pokemon: Mapped["Pokemon"] = relationship(
         back_populates="forms"
     )
+
+
+class SpeciesEvolution(Base):
+    __tablename__ = "species_evolutions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    chain_id: Mapped[int] = mapped_column(Integer, index=True)
+
+    from_species_id: Mapped[int | None] = mapped_column(
+        ForeignKey("pokemon_species.id"),
+        index=True,
+    )
+    to_species_id: Mapped[int] = mapped_column(
+        ForeignKey("pokemon_species.id"),
+        index=True,
+    )
+
+    trigger: Mapped[str | None] = mapped_column(String(50))
+    min_level: Mapped[int | None] = mapped_column(Integer)
+    item: Mapped[str | None] = mapped_column(String(100))
+    min_happiness: Mapped[int | None] = mapped_column(Integer)
+    details: Mapped[str] = mapped_column(Text, default="{}")
