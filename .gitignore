@@ -1,0 +1,28 @@
+# Daten
+data/pokedex.db
+data/*.db
+data/*.db-*
+data/sprites/
+data/shiny/
+data/cries/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtuelle Umgebungen
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+*.env

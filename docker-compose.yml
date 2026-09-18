@@ -1,0 +1,26 @@
+services:
+  pokedex:
+    build: ./backend
+    container_name: pokedex-backend
+    restart: unless-stopped
+    ports:
+      - "1510:1510"
+    volumes:
+      - ./data:/data
+      - ./backend/app:/backend
+    environment:
+      TZ: Europe/Berlin
+      DATABASE_PATH: /data/pokedex.db
+      MEDIA_PATH: /data
+
+  importer:
+    build: ./importer
+    container_name: pokedex-importer
+    profiles:
+      - import
+    volumes:
+      - ./data:/data
+      - ./backend:/backend
+    environment:
+      TZ: Europe/Berlin
+      DATABASE_PATH: /data/pokedex.db
