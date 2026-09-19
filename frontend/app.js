@@ -176,6 +176,7 @@ const modalClose = document.getElementById("modal-close");
 const lightbox = document.getElementById("lightbox");
 const lightboxImg = document.getElementById("lightbox-img");
 const lightboxClose = document.getElementById("lightbox-close");
+const lightboxShinyToggle = document.getElementById("lightbox-shiny-toggle");
 const typeFiltersEl = document.getElementById("type-filters");
 const favoritesToggleBtn = document.getElementById("favorites-toggle");
 const recentSection = document.getElementById("recent-section");
@@ -552,7 +553,7 @@ async function openDetail(identifier) {
 
     modalContent.innerHTML = `
       <div class="detail-header">
-        <img class="zoomable" src="${sprite || ""}" alt="${p.name}" data-full="${artwork || sprite || ""}" />
+        <img class="zoomable" src="${sprite || ""}" alt="${p.name}" data-normal="${artwork || sprite || ""}" data-shiny="${artworkShiny || ""}" data-start="normal" />
         <div>
           <p class="detail-id">#${String(p.id).padStart(3, "0")}</p>
           <div class="detail-title-row">
@@ -595,7 +596,7 @@ async function openDetail(identifier) {
       ${renderEvolutionSection(p)}
 
       ${shiny || cry ? `<div class="detail-section"><h3>Medien</h3>
-        ${shiny ? `<img class="zoomable" src="${shiny}" alt="${p.name} shiny" title="Schillernd" width="80" height="80" style="image-rendering:pixelated" data-full="${artworkShiny || shiny}" />` : ""}
+        ${shiny ? `<img class="zoomable" src="${shiny}" alt="${p.name} shiny" title="Schillernd" width="80" height="80" style="image-rendering:pixelated" data-normal="${artwork || sprite || ""}" data-shiny="${artworkShiny || shiny}" data-start="shiny" />` : ""}
         ${cry ? `<audio controls src="${cry}"></audio>` : ""}
       </div>` : ""}
     `;
@@ -609,22 +610,51 @@ function closeModal() {
   modalContent.innerHTML = "";
 }
 
-function openLightbox(src, alt) {
-  if (!src) return;
-  lightboxImg.src = src;
+let lightboxState = null;
+
+function renderLightboxImage() {
+  const { normal, shiny, isShiny, alt } = lightboxState;
+  lightboxImg.src = (isShiny && shiny) ? shiny : normal;
   lightboxImg.alt = alt || "";
+
+  const hasShiny = Boolean(shiny) && shiny !== normal;
+  lightboxShinyToggle.hidden = !hasShiny;
+  lightboxShinyToggle.classList.toggle("active", hasShiny && isShiny);
+  lightboxShinyToggle.setAttribute("aria-pressed", String(hasShiny && isShiny));
+}
+
+function openLightbox(el) {
+  const normal = el.dataset.normal || el.src;
+  const shiny = el.dataset.shiny || "";
+  if (!normal && !shiny) return;
+
+  lightboxState = {
+    normal,
+    shiny,
+    isShiny: el.dataset.start === "shiny" && Boolean(shiny),
+    alt: el.alt,
+  };
+
+  renderLightboxImage();
   lightbox.hidden = false;
+}
+
+function toggleLightboxShiny() {
+  if (!lightboxState || !lightboxState.shiny) return;
+  lightboxState.isShiny = !lightboxState.isShiny;
+  renderLightboxImage();
 }
 
 function closeLightbox() {
   lightbox.hidden = true;
   lightboxImg.src = "";
+  lightboxState = null;
 }
 
 modalContent.addEventListener("click", (e) => {
   const zoomable = e.target.closest(".zoomable");
   if (zoomable) {
-    openLightbox(zoomable.dataset.full || zoomable.src, zoomable.alt);
+    openLightbox(zoomable);
     return;
   }
 
@@ -650,6 +680,7 @@ modal.addEventListener("click", (e) => {
 });
 
 lightboxClose.addEventListener("click", closeLightbox);
+lightboxShinyToggle.addEventListener("click", toggleLightboxShiny);
 lightbox.addEventListener("click", (e) => {
   if (e.target === lightbox) closeLightbox();
 });
