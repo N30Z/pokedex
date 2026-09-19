@@ -1,4 +1,5 @@
-const CACHE_NAME = "pokedex-shell-v1";
+const CACHE_VERSION = "v2";
+const CACHE_NAME = `pokedex-shell-${CACHE_VERSION}`;
 
 const APP_SHELL = [
   "/",
@@ -6,6 +7,7 @@ const APP_SHELL = [
   "/style.css",
   "/app.js",
   "/manifest.json",
+  "/offline.html",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
 ];
@@ -56,19 +58,24 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // App shell / static assets: cache-first with network fallback + refresh.
+  // App shell / static assets: network-first, so a redeploy is picked up on
+  // the very next load instead of one load behind. Cache is the offline
+  // fallback, and gets refreshed on every successful network fetch.
   event.respondWith(
-    caches.match(request).then((cached) => {
-      const fetchPromise = fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()));
-          }
-          return response;
-        })
-        .catch(() => cached);
-
-      return cached || fetchPromise;
-    })
+    fetch(request)
+      .then((response) => {
+        if (response.ok) {
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()));
+        }
+        return response;
+      })
+      .catch(async () => {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        if (request.mode === "navigate") {
+          return caches.match("/offline.html");
+        }
+        return Response.error();
+      })
   );
 });

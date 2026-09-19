@@ -26,11 +26,36 @@
     />
   </header>
 
+  <div class="filter-bar">
+    <div id="type-filters" class="type-filters"></div>
+    <button id="favorites-toggle" class="chip-toggle" aria-pressed="false">★ Nur Favoriten</button>
+  </div>
+
+  <div id="recent-section" class="recent-section" hidden>
+    <h2>Zuletzt angesehen</h2>
+    <div id="recent-row" class="recent-row"></div>
+  </div>
+
   <main>
     <p id="status" class="status"></p>
     <div id="grid" class="grid"></div>
     <button id="load-more" class="load-more" hidden>Mehr laden</button>
   </main>
+
+  <div id="compare-bar" class="compare-bar" hidden>
+    <span id="compare-count"></span>
+    <div class="compare-bar-actions">
+      <button id="compare-open" class="load-more" disabled>Vergleichen</button>
+      <button id="compare-clear" class="chip-toggle">Leeren</button>
+    </div>
+  </div>
+
+  <div id="compare-modal" class="modal-overlay" hidden>
+    <div class="modal compare-modal">
+      <button id="compare-close" class="modal-close" aria-label="Schließen">×</button>
+      <div id="compare-content"></div>
+    </div>
+  </div>
 
   <div id="modal" class="modal-overlay" hidden>
     <div class="modal">

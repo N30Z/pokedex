@@ -1,3 +1,4 @@
+import difflib
 import json
 import os
 
@@ -104,6 +105,41 @@ def serialize_evolution_species(db, species_id):
     }
 
 
+def fuzzy_pokemon_ids(db, term, limit=60, threshold=0.6):
+    """Typo-tolerant fallback for when a plain substring search finds nothing.
+
+    Scores every default Pokémon's English/German name against the search
+    term with difflib's ratio (stdlib, no extra dependency) and keeps close
+    matches. The dataset is small (~1300 species), so scoring it in Python
+    on every fallback call is cheap and needs no separate search index.
+    """
+    term_norm = term.strip().lower()
+
+    if not term_norm:
+        return []
+
+    candidates = db.execute(
+        select(Pokemon.id, Pokemon.name, PokemonSpecies.german_name)
+        .join(PokemonSpecies)
+        .where(Pokemon.is_default.is_(True))
+    ).all()
+
+    scored = []
+
+    for pokemon_id, name, german_name in candidates:
+        ratio = max(
+            difflib.SequenceMatcher(None, term_norm, (name or "").lower()).ratio(),
+            difflib.SequenceMatcher(None, term_norm, (german_name or "").lower()).ratio(),
+        )
+
+        if ratio >= threshold:
+            scored.append((ratio, pokemon_id))
+
+    scored.sort(key=lambda pair: pair[0], reverse=True)
+
+    return [pokemon_id for _, pokemon_id in scored[:limit]]
+
+
 def serialize_evolution_edge(db, edge, other_species_id):
     info = serialize_evolution_species(db, other_species_id)
 
@@ -122,6 +158,8 @@ def serialize_evolution_edge(db, edge, other_species_id):
 @app.get("/api/pokemon")
 def list_pokemon(
     search: str | None = None,
+    ids: str | None = None,
+    types: str | None = None,
     limit: int = 40,
     offset: int = 0,
 ):
@@ -139,10 +177,49 @@ def list_pokemon(
 
         if search:
             like = f"%{search.strip().lower()}%"
-            query = query.where(
+            substring_query = query.where(
                 Pokemon.name.ilike(like)
                 | PokemonSpecies.german_name.ilike(like)
             )
+
+            substring_hit = db.scalar(
+                select(func.count()).select_from(substring_query.subquery())
+            )
+
+            if substring_hit:
+                query = substring_query
+            else:
+                query = query.where(
+                    Pokemon.id.in_(fuzzy_pokemon_ids(db, search))
+                )
+
+        if ids:
+            id_list = [
+                int(part)
+                for part in ids.split(",")
+                if part.strip().isdigit()
+            ]
+            query = query.where(Pokemon.id.in_(id_list))
+
+        if types:
+            type_list = [
+                part.strip().lower()
+                for part in types.split(",")
+                if part.strip()
+            ]
+            for type_slug in type_list:
+                escaped = (
+                    type_slug
+                    .replace("\\", "\\\\")
+                    .replace("%", "\\%")
+                    .replace("_", "\\_")
+                )
+                query = query.where(
+                    Pokemon.types.like(
+                        f'%"name": "{escaped}"%',
+                        escape="\\",
+                    )
+                )
 
         total = db.scalar(
             select(func.count()).select_from(query.subquery())

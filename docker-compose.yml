@@ -27,3 +27,19 @@ services:
     environment:
       TZ: Europe/Berlin
       DATABASE_PATH: /data/pokedex.db
+
+  importer-scheduler:
+    build: ./importer
+    container_name: pokedex-importer-scheduler
+    restart: unless-stopped
+    entrypoint: ["/app/loop.sh"]
+    profiles:
+      - scheduler
+    volumes:
+      - ./data:/data
+      - ./backend:/backend
+    environment:
+      TZ: Europe/Berlin
+      DATABASE_PATH: /data/pokedex.db
+      # Re-run the importer every IMPORT_INTERVAL_SECONDS (default: 7 days).
+      IMPORT_INTERVAL_SECONDS: 604800
