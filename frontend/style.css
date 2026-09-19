@@ -614,3 +614,30 @@ main {
   color: var(--text);
   font-size: 2rem;
 }
+
+.lightbox-shiny-toggle {
+  position: fixed;
+  top: 1rem;
+  left: 1.25rem;
+  background: rgba(26, 31, 54, 0.75);
+  border: 1px solid var(--surface-hover);
+  color: var(--text);
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 0.5rem 0.65rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.lightbox-shiny-toggle:hover {
+  border-color: var(--accent);
+}
+
+.lightbox-shiny-toggle.active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.lightbox-shiny-toggle[hidden] {
+  display: none;
+}
