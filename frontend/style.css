@@ -321,3 +321,37 @@ main {
   color: var(--muted);
   font-size: 1.2rem;
 }
+
+.zoomable {
+  cursor: zoom-in;
+}
+
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  z-index: 20;
+}
+
+.lightbox-overlay:not([hidden]) {
+  display: flex;
+}
+
+.lightbox-overlay img {
+  max-width: 90vw;
+  max-height: 85vh;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.lightbox-overlay .modal-close {
+  position: fixed;
+  top: 1rem;
+  right: 1.25rem;
+  color: var(--text);
+  font-size: 2rem;
+}

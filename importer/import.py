@@ -31,10 +31,14 @@ MEDIA_PATH = Path("/data")
 SPRITES_PATH = MEDIA_PATH / "sprites"
 SHINY_PATH = MEDIA_PATH / "shiny"
 CRIES_PATH = MEDIA_PATH / "cries"
+ARTWORK_PATH = MEDIA_PATH / "artwork"
+ARTWORK_SHINY_PATH = MEDIA_PATH / "artwork-shiny"
 
 SPRITES_PATH.mkdir(parents=True, exist_ok=True)
 SHINY_PATH.mkdir(parents=True, exist_ok=True)
 CRIES_PATH.mkdir(parents=True, exist_ok=True)
+ARTWORK_PATH.mkdir(parents=True, exist_ok=True)
+ARTWORK_SHINY_PATH.mkdir(parents=True, exist_ok=True)
 
 
 engine = create_engine(
@@ -531,6 +535,16 @@ async def import_pokemon(
         "front_shiny"
     )
 
+    other_sprites = sprites.get("other") or {}
+
+    artwork_url = (
+        other_sprites.get("official-artwork") or {}
+    ).get("front_default")
+
+    artwork_shiny_url = (
+        other_sprites.get("official-artwork") or {}
+    ).get("front_shiny")
+
     cries = pokemon_data.get(
         "cries",
         {},
@@ -557,6 +571,18 @@ async def import_pokemon(
         client,
         cry_url,
         CRIES_PATH / f"{pokemon_id}.ogg",
+    )
+
+    pokemon.artwork_url = await download_file(
+        client,
+        artwork_url,
+        ARTWORK_PATH / f"{pokemon_id}.png",
+    )
+
+    pokemon.artwork_shiny_url = await download_file(
+        client,
+        artwork_shiny_url,
+        ARTWORK_SHINY_PATH / f"{pokemon_id}.png",
     )
 
     db.commit()

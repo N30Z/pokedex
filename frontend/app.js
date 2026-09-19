@@ -173,6 +173,9 @@ const loadMoreBtn = document.getElementById("load-more");
 const modal = document.getElementById("modal");
 const modalContent = document.getElementById("modal-content");
 const modalClose = document.getElementById("modal-close");
+const lightbox = document.getElementById("lightbox");
+const lightboxImg = document.getElementById("lightbox-img");
+const lightboxClose = document.getElementById("lightbox-close");
 
 let currentSearch = "";
 let currentOffset = 0;
@@ -200,7 +203,11 @@ function mediaUrl(path) {
   if (!path) return null;
   if (/^https?:\/\//.test(path)) return path;
   const filename = path.split("/").pop();
-  const folder = path.includes("/shiny/")
+  const folder = path.includes("/artwork-shiny/")
+    ? "artwork-shiny"
+    : path.includes("/artwork/")
+    ? "artwork"
+    : path.includes("/shiny/")
     ? "shiny"
     : path.includes("/cries/")
     ? "cries"
@@ -244,6 +251,8 @@ async function openDetail(identifier) {
     const sprite = mediaUrl(p.sprite);
     const shiny = mediaUrl(p.shiny);
     const cry = mediaUrl(p.cry);
+    const artwork = mediaUrl(p.artwork) || sprite;
+    const artworkShiny = mediaUrl(p.artwork_shiny) || shiny;
 
     const typeBadges = (p.types || [])
       .map((t) => `<span class="type-badge">${typeNameDe(t)}</span>`)
@@ -264,7 +273,7 @@ async function openDetail(identifier) {
 
     modalContent.innerHTML = `
       <div class="detail-header">
-        <img src="${sprite || ""}" alt="${p.name}" />
+        <img class="zoomable" src="${sprite || ""}" alt="${p.name}" data-full="${artwork || sprite || ""}" />
         <div>
           <p class="detail-id">#${String(p.id).padStart(3, "0")}</p>
           <h2>${p.german_name || p.name}</h2>
@@ -303,7 +312,7 @@ async function openDetail(identifier) {
       ${renderEvolutionSection(p)}
 
       ${shiny || cry ? `<div class="detail-section"><h3>Medien</h3>
-        ${shiny ? `<img src="${shiny}" alt="${p.name} shiny" title="Schillernd" width="80" height="80" style="image-rendering:pixelated" />` : ""}
+        ${shiny ? `<img class="zoomable" src="${shiny}" alt="${p.name} shiny" title="Schillernd" width="80" height="80" style="image-rendering:pixelated" data-full="${artworkShiny || shiny}" />` : ""}
         ${cry ? `<audio controls src="${cry}"></audio>` : ""}
       </div>` : ""}
     `;
@@ -317,7 +326,25 @@ function closeModal() {
   modalContent.innerHTML = "";
 }
 
+function openLightbox(src, alt) {
+  if (!src) return;
+  lightboxImg.src = src;
+  lightboxImg.alt = alt || "";
+  lightbox.hidden = false;
+}
+
+function closeLightbox() {
+  lightbox.hidden = true;
+  lightboxImg.src = "";
+}
+
 modalContent.addEventListener("click", (e) => {
+  const zoomable = e.target.closest(".zoomable");
+  if (zoomable) {
+    openLightbox(zoomable.dataset.full || zoomable.src, zoomable.alt);
+    return;
+  }
+
   const entry = e.target.closest("[data-pokemon-id]");
   if (entry) openDetail(entry.dataset.pokemonId);
 });
@@ -326,8 +353,19 @@ modalClose.addEventListener("click", closeModal);
 modal.addEventListener("click", (e) => {
   if (e.target === modal) closeModal();
 });
+
+lightboxClose.addEventListener("click", closeLightbox);
+lightbox.addEventListener("click", (e) => {
+  if (e.target === lightbox) closeLightbox();
+});
+
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !modal.hidden) closeModal();
+  if (e.key !== "Escape") return;
+  if (!lightbox.hidden) {
+    closeLightbox();
+  } else if (!modal.hidden) {
+    closeModal();
+  }
 });
 
 async function loadPage({ reset }) {
@@ -370,3 +408,9 @@ searchInput.addEventListener("input", (e) => {
 loadMoreBtn.addEventListener("click", () => loadPage({ reset: false }));
 
 loadPage({ reset: true });
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register(`${API_BASE_URL}/sw.js`).catch(() => {});
+  });
+}

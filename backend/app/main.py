@@ -72,6 +72,8 @@ def serialize(pokemon: Pokemon):
         "sprite": pokemon.sprite_url,
         "shiny": pokemon.shiny_url,
         "cry": pokemon.cry_url,
+        "artwork": pokemon.artwork_url,
+        "artwork_shiny": pokemon.artwork_shiny_url,
     }
 
 
