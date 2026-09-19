@@ -239,16 +239,27 @@ def get_localized_description(data, language="de"):
     )
 
 
+ROMAN_NUMERALS = {
+    "i": 1,
+    "ii": 2,
+    "iii": 3,
+    "iv": 4,
+    "v": 5,
+    "vi": 6,
+    "vii": 7,
+    "viii": 8,
+    "ix": 9,
+    "x": 10,
+}
+
+
 def generation_number(generation):
     if not generation:
         return None
 
     name = generation.get("name", "")
 
-    try:
-        return int(name.split("-")[-1])
-    except Exception:
-        return None
+    return ROMAN_NUMERALS.get(name.split("-")[-1])
 
 
 def extract_id_from_url(url):
