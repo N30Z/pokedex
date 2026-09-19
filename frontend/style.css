@@ -171,6 +171,10 @@ main {
   cursor: not-allowed;
 }
 
+.load-more[hidden] {
+  display: none;
+}
+
 .filter-bar {
   display: flex;
   flex-wrap: wrap;
