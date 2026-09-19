@@ -160,6 +160,7 @@ def list_pokemon(
     search: str | None = None,
     ids: str | None = None,
     types: str | None = None,
+    generation: int | None = None,
     limit: int = 40,
     offset: int = 0,
 ):
@@ -200,6 +201,9 @@ def list_pokemon(
                 if part.strip().isdigit()
             ]
             query = query.where(Pokemon.id.in_(id_list))
+
+        if generation:
+            query = query.where(PokemonSpecies.generation == generation)
 
         if types:
             type_list = [
