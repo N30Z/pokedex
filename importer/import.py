@@ -2,9 +2,11 @@ import asyncio
 import json
 import os
 import sys
+from io import BytesIO
 from pathlib import Path
 
 import httpx
+from PIL import Image
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -31,10 +33,14 @@ MEDIA_PATH = Path("/data")
 SPRITES_PATH = MEDIA_PATH / "sprites"
 SHINY_PATH = MEDIA_PATH / "shiny"
 CRIES_PATH = MEDIA_PATH / "cries"
+ARTWORK_PATH = MEDIA_PATH / "artwork"
+ARTWORK_SHINY_PATH = MEDIA_PATH / "artwork-shiny"
 
 SPRITES_PATH.mkdir(parents=True, exist_ok=True)
 SHINY_PATH.mkdir(parents=True, exist_ok=True)
 CRIES_PATH.mkdir(parents=True, exist_ok=True)
+ARTWORK_PATH.mkdir(parents=True, exist_ok=True)
+ARTWORK_SHINY_PATH.mkdir(parents=True, exist_ok=True)
 
 
 engine = create_engine(
@@ -124,6 +130,68 @@ async def download_file(
     except Exception as exc:
         print(
             f"    Download-Fehler: {url}: {exc}"
+        )
+
+        return None
+
+
+ARTWORK_SIZE = 1024
+
+
+async def download_artwork(
+    client: httpx.AsyncClient,
+    url: str | None,
+    target: Path,
+    size: int = ARTWORK_SIZE,
+):
+    """Download PokeAPI artwork and upscale it to a fixed square canvas.
+
+    PokeAPI's official-artwork sprites are natively only 475x475, so this
+    doesn't add real detail - it just gives the frontend lightbox a
+    consistently large, pre-rendered image instead of upscaling in the
+    browser on every view.
+    """
+    if not url:
+        return None
+
+    if target.exists() and target.stat().st_size > 0:
+        return str(target)
+
+    try:
+        response = await client.get(
+            url,
+            timeout=120,
+            follow_redirects=True,
+        )
+
+        if response.status_code == 404:
+            return None
+
+        response.raise_for_status()
+
+        image = Image.open(BytesIO(response.content)).convert("RGBA")
+
+        scale = size / max(image.width, image.height)
+        new_size = (
+            max(1, round(image.width * scale)),
+            max(1, round(image.height * scale)),
+        )
+        image = image.resize(new_size, Image.LANCZOS)
+
+        canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        offset = (
+            (size - image.width) // 2,
+            (size - image.height) // 2,
+        )
+        canvas.paste(image, offset, image)
+
+        canvas.save(target)
+
+        return str(target)
+
+    except Exception as exc:
+        print(
+            f"    Artwork-Fehler: {url}: {exc}"
         )
 
         return None
@@ -531,6 +599,16 @@ async def import_pokemon(
         "front_shiny"
     )
 
+    other_sprites = sprites.get("other") or {}
+
+    artwork_url = (
+        other_sprites.get("official-artwork") or {}
+    ).get("front_default")
+
+    artwork_shiny_url = (
+        other_sprites.get("official-artwork") or {}
+    ).get("front_shiny")
+
     cries = pokemon_data.get(
         "cries",
         {},
@@ -557,6 +635,18 @@ async def import_pokemon(
         client,
         cry_url,
         CRIES_PATH / f"{pokemon_id}.ogg",
+    )
+
+    pokemon.artwork_url = await download_artwork(
+        client,
+        artwork_url,
+        ARTWORK_PATH / f"{pokemon_id}.png",
+    )
+
+    pokemon.artwork_shiny_url = await download_artwork(
+        client,
+        artwork_shiny_url,
+        ARTWORK_SHINY_PATH / f"{pokemon_id}.png",
     )
 
     db.commit()

@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pokédex</title>
   <link rel="stylesheet" href="style.css" />
+
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#232a4a" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Pokédex" />
 </head>
 <body>
   <header class="topbar">
@@ -17,17 +26,47 @@
     />
   </header>
 
+  <div class="filter-bar">
+    <div id="type-filters" class="type-filters"></div>
+    <button id="favorites-toggle" class="chip-toggle" aria-pressed="false">★ Nur Favoriten</button>
+  </div>
+
+  <div id="recent-section" class="recent-section" hidden>
+    <h2>Zuletzt angesehen</h2>
+    <div id="recent-row" class="recent-row"></div>
+  </div>
+
   <main>
     <p id="status" class="status"></p>
     <div id="grid" class="grid"></div>
     <button id="load-more" class="load-more" hidden>Mehr laden</button>
   </main>
 
+  <div id="compare-bar" class="compare-bar" hidden>
+    <span id="compare-count"></span>
+    <div class="compare-bar-actions">
+      <button id="compare-open" class="load-more" disabled>Vergleichen</button>
+      <button id="compare-clear" class="chip-toggle">Leeren</button>
+    </div>
+  </div>
+
+  <div id="compare-modal" class="modal-overlay" hidden>
+    <div class="modal compare-modal">
+      <button id="compare-close" class="modal-close" aria-label="Schließen">×</button>
+      <div id="compare-content"></div>
+    </div>
+  </div>
+
   <div id="modal" class="modal-overlay" hidden>
     <div class="modal">
       <button id="modal-close" class="modal-close" aria-label="Schließen">×</button>
       <div id="modal-content"></div>
     </div>
+  </div>
+
+  <div id="lightbox" class="lightbox-overlay" hidden>
+    <button id="lightbox-close" class="modal-close" aria-label="Schließen">×</button>
+    <img id="lightbox-img" src="" alt="" />
   </div>
 
   <script src="app.js"></script>

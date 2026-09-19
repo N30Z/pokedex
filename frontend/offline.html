@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Offline – Pokédex</title>
+  <link rel="stylesheet" href="style.css" />
+  <meta name="theme-color" content="#232a4a" />
+  <link rel="icon" href="icons/icon-192.png" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Pokédex</h1>
+  </header>
+
+  <main class="offline-main">
+    <p class="offline-emoji">📡</p>
+    <h2>Keine Verbindung</h2>
+    <p class="status">
+      Diese Seite ist offline nicht verfügbar. Bereits angesehene Pokémon-Bilder
+      und -Daten können weiterhin aus dem Cache geladen werden, sobald du zur
+      App zurückkehrst.
+    </p>
+    <button class="load-more" onclick="location.reload()">Erneut versuchen</button>
+  </main>
+</body>
+</html>

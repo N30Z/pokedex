@@ -64,6 +64,8 @@ class Pokemon(Base):
     sprite_url: Mapped[str | None] = mapped_column(String(500))
     shiny_url: Mapped[str | None] = mapped_column(String(500))
     cry_url: Mapped[str | None] = mapped_column(String(500))
+    artwork_url: Mapped[str | None] = mapped_column(String(500))
+    artwork_shiny_url: Mapped[str | None] = mapped_column(String(500))
 
     species: Mapped["PokemonSpecies"] = relationship(
         back_populates="pokemon"
