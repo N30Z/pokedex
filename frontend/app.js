@@ -177,25 +177,19 @@ const lightbox = document.getElementById("lightbox");
 const lightboxImg = document.getElementById("lightbox-img");
 const lightboxClose = document.getElementById("lightbox-close");
 const lightboxShinyToggle = document.getElementById("lightbox-shiny-toggle");
-const typeFiltersEl = document.getElementById("type-filters");
-const favoritesToggleBtn = document.getElementById("favorites-toggle");
+const typeFilterEl = document.getElementById("type-filter");
+const generationFilterEl = document.getElementById("generation-filter");
+const favoritesSection = document.getElementById("favorites-section");
+const favoritesRow = document.getElementById("favorites-row");
 const recentSection = document.getElementById("recent-section");
 const recentRow = document.getElementById("recent-row");
-const compareBar = document.getElementById("compare-bar");
-const compareCount = document.getElementById("compare-count");
-const compareOpenBtn = document.getElementById("compare-open");
-const compareClearBtn = document.getElementById("compare-clear");
-const compareModal = document.getElementById("compare-modal");
-const compareContent = document.getElementById("compare-content");
-const compareCloseBtn = document.getElementById("compare-close");
 
 let currentSearch = "";
 let currentOffset = 0;
 let total = 0;
 let requestToken = 0;
-let activeTypes = new Set();
-let favoritesOnly = false;
-let compareIds = [];
+let activeType = "";
+let activeGeneration = "";
 
 // ---------------------------------------------------------
 // Favorites (localStorage)
@@ -237,8 +231,40 @@ function toggleFavorite(id) {
     btn.classList.toggle("active", active);
   });
 
-  if (favoritesOnly) loadPage({ reset: true });
+  renderFavoritesRow();
 }
+
+async function renderFavoritesRow() {
+  if (favorites.size === 0) {
+    favoritesSection.hidden = true;
+    favoritesRow.innerHTML = "";
+    return;
+  }
+
+  favoritesSection.hidden = false;
+
+  try {
+    const data = await fetchPokemonList({ ids: [...favorites], offset: 0, limit: 100 });
+    favoritesRow.innerHTML = data.items
+      .map((p) => {
+        const sprite = mediaUrl(p.sprite);
+        return `
+          <div class="favorites-item" data-pokemon-id="${p.id}">
+            <img src="${sprite || ""}" alt="${p.name}" loading="lazy" />
+            <span>${p.german_name || p.name}</span>
+          </div>
+        `;
+      })
+      .join("");
+  } catch {
+    favoritesRow.innerHTML = "";
+  }
+}
+
+favoritesRow.addEventListener("click", (e) => {
+  const item = e.target.closest("[data-pokemon-id]");
+  if (item) openDetail(item.dataset.pokemonId);
+});
 
 // ---------------------------------------------------------
 // Recently viewed (localStorage)
@@ -294,168 +320,56 @@ recentRow.addEventListener("click", (e) => {
 });
 
 // ---------------------------------------------------------
-// Compare (in-memory, up to 2 Pokémon)
+// Type & generation filter dropdowns
 // ---------------------------------------------------------
 
-function isCompareSelected(id) {
-  return compareIds.includes(Number(id));
-}
+const GENERATION_NAMES_DE = {
+  1: "I – Kanto",
+  2: "II – Johto",
+  3: "III – Hoenn",
+  4: "IV – Sinnoh",
+  5: "V – Einall",
+  6: "VI – Kalos",
+  7: "VII – Alola",
+  8: "VIII – Galar",
+  9: "IX – Paldea",
+};
 
-function toggleCompare(id) {
-  id = Number(id);
-  const idx = compareIds.indexOf(id);
-
-  if (idx !== -1) {
-    compareIds.splice(idx, 1);
-  } else {
-    if (compareIds.length >= 2) compareIds.shift();
-    compareIds.push(id);
-  }
-
-  updateCompareUI();
-}
-
-function clearCompare() {
-  compareIds = [];
-  updateCompareUI();
-}
-
-function updateCompareUI() {
-  document.querySelectorAll("[data-compare-id]").forEach((el) => {
-    const id = Number(el.dataset.compareId);
-    const selected = compareIds.includes(id);
-    if (el.matches("input")) el.checked = selected;
-    else el.classList.toggle("active", selected);
-  });
-
-  document.querySelectorAll(".card").forEach((card) => {
-    card.classList.toggle("compare-selected", compareIds.includes(Number(card.dataset.pokemonId)));
-  });
-
-  compareBar.hidden = compareIds.length === 0;
-  compareCount.textContent = compareIds.length ? `${compareIds.length}/2 ausgewählt` : "";
-  compareOpenBtn.disabled = compareIds.length !== 2;
-}
-
-function closeCompareModal() {
-  compareModal.hidden = true;
-  compareContent.innerHTML = "";
-}
-
-function statLabel(name, de) {
-  return de || formatSlug(name);
-}
-
-function renderCompare(a, b) {
-  const spriteA = mediaUrl(a.sprite);
-  const spriteB = mediaUrl(b.sprite);
-
-  const column = (p, sprite) => `
-    <div class="compare-column">
-      <img src="${sprite || ""}" alt="${p.name}" />
-      <p class="card-name">${p.german_name || p.name}</p>
-      <div class="type-badges">${(p.types || []).map((t) => `<span class="type-badge">${typeNameDe(t)}</span>`).join("")}</div>
-    </div>
-  `;
-
-  const statsA = new Map((a.stats || []).map((s) => [s.name, s]));
-  const statsB = new Map((b.stats || []).map((s) => [s.name, s]));
-  const statNames = [...new Set([...statsA.keys(), ...statsB.keys()])];
-
-  const statsHtml = statNames
-    .map((name) => {
-      const sa = statsA.get(name);
-      const sb = statsB.get(name);
-      const va = sa?.value ?? null;
-      const vb = sb?.value ?? null;
-      const higherA = va != null && vb != null && va > vb;
-      const higherB = va != null && vb != null && vb > va;
-
-      return `
-        <div class="compare-stat-row"><span class="compare-stat-label">${statLabel(name, sa?.name_de || sb?.name_de)}</span></div>
-        <div class="compare-stat-row">
-          <span class="compare-stat-value${higherA ? " higher" : ""}">${va ?? "–"}</span>
-          <span></span>
-          <span class="compare-stat-value${higherB ? " higher" : ""}">${vb ?? "–"}</span>
-        </div>
-      `;
-    })
-    .join("");
-
-  return `
-    <div class="compare-columns">${column(a, spriteA)}${column(b, spriteB)}</div>
-    <div class="detail-section">
-      <div class="compare-stat-row"><span class="compare-stat-label">Größe / Gewicht</span></div>
-      <div class="compare-stat-row">
-        <span>${a.height_m ?? "–"} m / ${a.weight_kg ?? "–"} kg</span>
-        <span></span>
-        <span>${b.height_m ?? "–"} m / ${b.weight_kg ?? "–"} kg</span>
-      </div>
-      ${statsHtml}
-    </div>
-  `;
-}
-
-async function openCompare() {
-  if (compareIds.length !== 2) return;
-
-  compareModal.hidden = false;
-  compareContent.innerHTML = "<p>Lädt…</p>";
-
-  try {
-    const [a, b] = await Promise.all(compareIds.map((id) => fetchPokemonDetail(id)));
-    compareContent.innerHTML = renderCompare(a, b);
-  } catch (err) {
-    compareContent.innerHTML = `<p>Fehler beim Laden: ${err.message}</p>`;
-  }
-}
-
-compareOpenBtn.addEventListener("click", openCompare);
-compareClearBtn.addEventListener("click", clearCompare);
-compareCloseBtn.addEventListener("click", closeCompareModal);
-compareModal.addEventListener("click", (e) => {
-  if (e.target === compareModal) closeCompareModal();
-});
-
-// ---------------------------------------------------------
-// Type filter chips
-// ---------------------------------------------------------
-
-function renderTypeFilters() {
-  typeFiltersEl.innerHTML = Object.keys(TYPE_NAMES_DE)
+function renderTypeFilterOptions() {
+  const options = Object.keys(TYPE_NAMES_DE)
     .filter((slug) => slug !== "unknown")
-    .map((slug) => `<button type="button" class="type-chip" data-type="${slug}">${typeNameDeBySlug(slug)}</button>`)
+    .map((slug) => `<option value="${slug}">${typeNameDeBySlug(slug)}</option>`)
     .join("");
+  typeFilterEl.insertAdjacentHTML("beforeend", options);
 }
 
-typeFiltersEl.addEventListener("click", (e) => {
-  const chip = e.target.closest(".type-chip");
-  if (!chip) return;
+function renderGenerationFilterOptions() {
+  const options = Object.entries(GENERATION_NAMES_DE)
+    .map(([gen, label]) => `<option value="${gen}">Generation ${label}</option>`)
+    .join("");
+  generationFilterEl.insertAdjacentHTML("beforeend", options);
+}
 
-  const slug = chip.dataset.type;
-  if (activeTypes.has(slug)) activeTypes.delete(slug);
-  else activeTypes.add(slug);
-
-  chip.classList.toggle("active", activeTypes.has(slug));
+typeFilterEl.addEventListener("change", () => {
+  activeType = typeFilterEl.value;
   currentOffset = 0;
   loadPage({ reset: true });
 });
 
-favoritesToggleBtn.addEventListener("click", () => {
-  favoritesOnly = !favoritesOnly;
-  favoritesToggleBtn.setAttribute("aria-pressed", String(favoritesOnly));
-  favoritesToggleBtn.classList.toggle("active", favoritesOnly);
+generationFilterEl.addEventListener("change", () => {
+  activeGeneration = generationFilterEl.value;
   currentOffset = 0;
   loadPage({ reset: true });
 });
 
-async function fetchPokemonList({ search, offset, ids, types }) {
+async function fetchPokemonList({ search, offset, ids, types, generation, limit }) {
   const url = new URL(`${API_BASE_URL}/api/pokemon`, window.location.href);
-  url.searchParams.set("limit", PAGE_SIZE);
+  url.searchParams.set("limit", limit || PAGE_SIZE);
   url.searchParams.set("offset", offset);
   if (search) url.searchParams.set("search", search);
   if (ids && ids.length) url.searchParams.set("ids", ids.join(","));
   if (types && types.length) url.searchParams.set("types", types.join(","));
+  if (generation) url.searchParams.set("generation", generation);
 
   const response = await fetch(url);
   if (!response.ok) throw new Error(`API-Fehler: ${response.status}`);
@@ -490,7 +404,6 @@ function createCard(pokemon) {
   card.tabIndex = 0;
   card.setAttribute("role", "button");
   card.dataset.pokemonId = pokemon.id;
-  if (isCompareSelected(pokemon.id)) card.classList.add("compare-selected");
 
   const sprite = mediaUrl(pokemon.sprite);
   const typeBadges = (pokemon.types || [])
@@ -498,7 +411,6 @@ function createCard(pokemon) {
     .join("");
 
   card.innerHTML = `
-    <input type="checkbox" class="card-compare" data-compare-id="${pokemon.id}" title="Zum Vergleich auswählen" ${isCompareSelected(pokemon.id) ? "checked" : ""} />
     <button type="button" class="card-favorite${isFavorite(pokemon.id) ? " active" : ""}" data-favorite-id="${pokemon.id}" aria-label="Favorit" title="Favorit">★</button>
     <img src="${sprite || ""}" alt="${pokemon.name}" loading="lazy" />
     <p class="card-id">#${String(pokemon.id).padStart(3, "0")}</p>
@@ -508,7 +420,7 @@ function createCard(pokemon) {
 
   const open = () => openDetail(pokemon.id);
   card.addEventListener("click", (e) => {
-    if (e.target.closest(".card-favorite") || e.target.closest(".card-compare")) return;
+    if (e.target.closest(".card-favorite")) return;
     open();
   });
   card.addEventListener("keydown", (e) => {
@@ -516,7 +428,6 @@ function createCard(pokemon) {
   });
 
   card.querySelector(".card-favorite").addEventListener("click", () => toggleFavorite(pokemon.id));
-  card.querySelector(".card-compare").addEventListener("change", () => toggleCompare(pokemon.id));
 
   return card;
 }
@@ -561,7 +472,6 @@ async function openDetail(identifier) {
             <button type="button" class="detail-favorite${isFavorite(p.id) ? " active" : ""}" data-favorite-id="${p.id}" aria-label="Favorit" title="Favorit">★</button>
           </div>
           <div class="type-badges">${typeBadges}</div>
-          <button type="button" class="chip-toggle detail-compare${isCompareSelected(p.id) ? " active" : ""}" data-compare-id="${p.id}">⚖ Vergleichen</button>
         </div>
       </div>
 
@@ -664,12 +574,6 @@ modalContent.addEventListener("click", (e) => {
     return;
   }
 
-  const compareBtn = e.target.closest(".detail-compare");
-  if (compareBtn) {
-    toggleCompare(compareBtn.dataset.compareId);
-    return;
-  }
-
   const entry = e.target.closest("[data-pokemon-id]");
   if (entry) openDetail(entry.dataset.pokemonId);
 });
@@ -689,8 +593,6 @@ document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   if (!lightbox.hidden) {
     closeLightbox();
-  } else if (!compareModal.hidden) {
-    closeCompareModal();
   } else if (!modal.hidden) {
     closeModal();
   }
@@ -701,19 +603,12 @@ async function loadPage({ reset }) {
   statusEl.textContent = "Lädt…";
   loadMoreBtn.hidden = true;
 
-  if (favoritesOnly && favorites.size === 0) {
-    if (reset) grid.innerHTML = "";
-    total = 0;
-    statusEl.textContent = "Keine Favoriten ausgewählt.";
-    return;
-  }
-
   try {
     const data = await fetchPokemonList({
       search: currentSearch,
       offset: currentOffset,
-      ids: favoritesOnly ? [...favorites] : null,
-      types: [...activeTypes],
+      types: activeType ? [activeType] : [],
+      generation: activeGeneration,
     });
     if (token !== requestToken) return;
 
@@ -747,7 +642,9 @@ searchInput.addEventListener("input", (e) => {
 
 loadMoreBtn.addEventListener("click", () => loadPage({ reset: false }));
 
-renderTypeFilters();
+renderTypeFilterOptions();
+renderGenerationFilterOptions();
+renderFavoritesRow();
 renderRecentRow();
 loadPage({ reset: true });
 
