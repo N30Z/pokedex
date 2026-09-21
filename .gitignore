@@ -6,6 +6,13 @@ data/sprites/
 data/shiny/
 data/cries/
 
+# Voice-Modelle (per backend/scripts/download_models.sh geladen)
+models/
+
+# ESPHome
+esp32/secrets.yaml
+esp32/.esphome/
+
 # Python
 __pycache__/
 *.py[cod]
