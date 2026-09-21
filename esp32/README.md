@@ -3,7 +3,9 @@
 An ESPHome firmware (`pokedex.yaml`) that turns an ESP32 into a physical,
 voice-driven front end for the Pokédex backend: press a button, say a
 Pokémon's German name, see its sprite and hear its cry, name, and
-description — then it goes back to deep sleep.
+description, then the display shows the normal sprite for 10 seconds
+followed by the shiny variant for another 10 seconds — then it goes back
+to deep sleep.
 
 This is an [ESPHome](https://esphome.io) YAML configuration, not a
 standalone PlatformIO/Arduino project — ESPHome owns the build/flash
