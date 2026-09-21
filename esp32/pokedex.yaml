@@ -4,9 +4,10 @@
 # an INMP441 (I2S mic), POSTs it as a 16kHz mono 16-bit PCM WAV to the
 # backend's /api/voice/recognize, and on a match shows the sprite on a
 # GC9A01 round display, plays the cry, then speaks the name and
-# description (all as WAV from the backend, via a MAX98357A I2S amp)
-# before returning to deep sleep. See README.md for wiring and setup, and
-# CLAUDE.md ("Voice interface") for the backend side of this contract.
+# description (all as WAV from the backend, via a MAX98357A I2S amp).
+# The normal sprite is then shown for 10s, the shiny sprite for another
+# 10s, before returning to deep sleep. See README.md for wiring and setup,
+# and CLAUDE.md ("Voice interface") for the backend side of this contract.
 #
 # Targets a 2025.x-era ESPHome (needs the on_data microphone callback and
 # the unified mipi_spi display platform). Requires a PSRAM-equipped board
@@ -74,8 +75,10 @@ deep_sleep:
     number: GPIO33
     inverted: true
   # Safety ceiling in case the flow hangs (e.g. WiFi/backend unreachable);
-  # the flow itself calls deep_sleep.enter explicitly once done.
-  run_duration: 30s
+  # the flow itself calls deep_sleep.enter explicitly once done. Generous
+  # enough for recording + recognition + cry/name/description playback +
+  # the two fixed 10s sprite/shiny display windows.
+  run_duration: 90s
 
 # ---- Audio: separate I2S peripherals for mic (record) and amp (play) ----
 i2s_audio:
@@ -211,6 +214,17 @@ script:
           id: play_remote_wav
           wav_path: "tts/description"
       - script.wait: play_remote_wav
+      # Show the normal sprite for 10s, then the shiny variant for 10s,
+      # then hand back to run_pokedex_flow's deep_sleep.enter.
+      - delay: 10s
+      - lambda: 'id(status_text) = "Schillernd!";'
+      - online_image.set_url:
+          id: sprite_image
+          url: !lambda |-
+            return (std::string("${backend_base_url}") + "/media/shiny/"
+                    + std::to_string(id(matched_pokemon_id)) + ".png");
+      - component.update: gc9a01_display
+      - delay: 10s
 
   - id: play_remote_wav
     parameters:
