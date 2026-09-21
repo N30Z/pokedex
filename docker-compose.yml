@@ -11,10 +11,17 @@ services:
       - ./data:/data
       - ./backend/app:/app/app
       - ./frontend:/app/static
+      - ./models:/models:ro
     environment:
       TZ: Europe/Berlin
       DATABASE_PATH: /data/pokedex.db
       MEDIA_PATH: /data
+      # Self-hosted German STT/TTS for the ESP32 voice interface (esp32/).
+      # Fetch these with backend/scripts/download_models.sh; voice endpoints
+      # return 503 until the files exist, the rest of the app is unaffected.
+      VOSK_MODEL_PATH: /models/vosk-de
+      PIPER_MODEL_PATH: /models/piper-de.onnx
+      PIPER_CONFIG_PATH: /models/piper-de.onnx.json
 
   importer:
     build: ./importer

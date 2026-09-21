@@ -2,11 +2,12 @@ import difflib
 import json
 import os
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 
+from . import voice
 from .database import SessionLocal, init_db
 from .models import Pokemon, PokemonSpecies, SpeciesEvolution
 
@@ -140,6 +141,47 @@ def fuzzy_pokemon_ids(db, term, limit=60, threshold=0.6):
     return [pokemon_id for _, pokemon_id in scored[:limit]]
 
 
+def match_transcript_to_pokemon(db, transcript: str):
+    """Match a German speech transcript to a default Pokémon.
+
+    German-only (unlike the text search box, which also matches English
+    names) since this only ever receives spoken German. Tries a substring
+    match first, then falls back to fuzzy_pokemon_ids's difflib scoring
+    (reused rather than duplicated) for typo/mishearing tolerance.
+    """
+    term = transcript.strip()
+
+    if not term:
+        return None
+
+    like = f"%{term.lower()}%"
+
+    pokemon = db.scalar(
+        select(Pokemon)
+        .join(PokemonSpecies)
+        .where(
+            Pokemon.is_default.is_(True),
+            PokemonSpecies.german_name.ilike(like),
+        )
+    )
+
+    if pokemon is not None:
+        return pokemon, 1.0
+
+    candidate_ids = fuzzy_pokemon_ids(db, term, limit=1)
+
+    if not candidate_ids:
+        return None
+
+    pokemon = db.get(Pokemon, candidate_ids[0])
+
+    confidence = difflib.SequenceMatcher(
+        None, term.lower(), (pokemon.species.german_name or "").lower()
+    ).ratio()
+
+    return pokemon, confidence
+
+
 def serialize_evolution_edge(db, edge, other_species_id):
     info = serialize_evolution_species(db, other_species_id)
 
@@ -244,36 +286,41 @@ def list_pokemon(
         db.close()
 
 
+def _get_pokemon_or_404(db, identifier: str) -> Pokemon:
+    if identifier.isdigit():
+
+        pokemon = db.get(
+            Pokemon,
+            int(identifier),
+        )
+
+    else:
+
+        pokemon = db.scalar(
+            select(Pokemon)
+            .join(PokemonSpecies)
+            .where(
+                (Pokemon.name == identifier.lower())
+                | (PokemonSpecies.german_name == identifier)
+            )
+        )
+
+    if pokemon is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Pokémon nicht gefunden",
+        )
+
+    return pokemon
+
+
 @app.get("/api/pokemon/{identifier}")
 def get_pokemon(identifier: str):
 
     db = SessionLocal()
 
     try:
-
-        if identifier.isdigit():
-
-            pokemon = db.get(
-                Pokemon,
-                int(identifier),
-            )
-
-        else:
-
-            pokemon = db.scalar(
-                select(Pokemon)
-                .join(PokemonSpecies)
-                .where(
-                    (Pokemon.name == identifier.lower())
-                    | (PokemonSpecies.german_name == identifier)
-                )
-            )
-
-        if pokemon is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Pokémon nicht gefunden",
-            )
+        pokemon = _get_pokemon_or_404(db, identifier)
 
         result = serialize(pokemon)
 
@@ -316,6 +363,112 @@ def count():
         return {
             "pokemon": db.query(Pokemon).count()
         }
+
+    finally:
+        db.close()
+
+
+@app.post("/api/voice/recognize")
+async def recognize_voice(request: Request):
+    wav_bytes = await request.body()
+
+    try:
+        transcript = voice.transcribe_wav(wav_bytes)
+    except voice.VoiceUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except (ValueError, EOFError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    db = SessionLocal()
+
+    try:
+        match = match_transcript_to_pokemon(db, transcript)
+
+        if match is None:
+            return {"transcript": transcript, "matched": False}
+
+        pokemon, confidence = match
+
+        return {
+            "transcript": transcript,
+            "matched": True,
+            "confidence": confidence,
+            "id": pokemon.id,
+            "name": pokemon.name,
+            "german_name": pokemon.species.german_name if pokemon.species else None,
+        }
+
+    finally:
+        db.close()
+
+
+@app.get("/api/pokemon/{identifier}/tts/name")
+def get_pokemon_tts_name(identifier: str):
+    db = SessionLocal()
+
+    try:
+        pokemon = _get_pokemon_or_404(db, identifier)
+        german_name = pokemon.species.german_name if pokemon.species else None
+
+        if not german_name:
+            raise HTTPException(
+                status_code=404,
+                detail="Kein deutscher Name vorhanden",
+            )
+
+        try:
+            wav_bytes = voice.synthesize_tts(german_name)
+        except voice.VoiceUnavailable as exc:
+            raise HTTPException(status_code=503, detail=str(exc))
+
+        return Response(content=wav_bytes, media_type="audio/wav")
+
+    finally:
+        db.close()
+
+
+@app.get("/api/pokemon/{identifier}/tts/description")
+def get_pokemon_tts_description(identifier: str):
+    db = SessionLocal()
+
+    try:
+        pokemon = _get_pokemon_or_404(db, identifier)
+        species = pokemon.species
+        description = species.description_de if species else None
+
+        if not description:
+            raise HTTPException(
+                status_code=404,
+                detail="Keine deutsche Beschreibung vorhanden",
+            )
+
+        try:
+            wav_bytes = voice.synthesize_tts(description)
+        except voice.VoiceUnavailable as exc:
+            raise HTTPException(status_code=503, detail=str(exc))
+
+        return Response(content=wav_bytes, media_type="audio/wav")
+
+    finally:
+        db.close()
+
+
+@app.get("/api/pokemon/{identifier}/cry.wav")
+def get_pokemon_cry_wav(identifier: str):
+    db = SessionLocal()
+
+    try:
+        pokemon = _get_pokemon_or_404(db, identifier)
+
+        if not pokemon.cry_url or not os.path.isfile(pokemon.cry_url):
+            raise HTTPException(
+                status_code=404,
+                detail="Kein Cry vorhanden",
+            )
+
+        wav_bytes = voice.transcode_cry_to_wav(pokemon.cry_url, pokemon.id)
+
+        return Response(content=wav_bytes, media_type="audio/wav")
 
     finally:
         db.close()
