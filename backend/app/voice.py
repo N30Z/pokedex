@@ -1,30 +1,33 @@
-"""Self-hosted voice pipeline: German speech-to-text (Vosk) and
+"""Self-hosted voice pipeline: German speech-to-text (faster-whisper) and
 text-to-speech (Piper), plus WAV transcoding for the existing cry files.
 
 Everything here targets one fixed wire format — 16kHz mono 16-bit PCM WAV —
 for mic uploads, TTS output, and cry output alike, so the ESP32/ESPHome side
 only ever needs a single playback rate and no on-device audio decoder.
 
-Model files (a Vosk German model, a Piper German voice) are large binary
-assets fetched separately via backend/scripts/download_models.sh, not
-bundled into the Docker image. They're loaded lazily on first use rather
+Model files (a faster-whisper CTranslate2 model, a Piper German voice) are
+large binary assets fetched separately via backend/scripts/download_models.sh,
+not bundled into the Docker image. They're loaded lazily on first use rather
 than at import time, so the rest of the app keeps working when they're
 absent; callers should catch VoiceUnavailable and turn it into a 503.
 """
 
 import hashlib
 import io
-import json
 import os
 import subprocess
 import wave
 
-import vosk
+import numpy as np
+from faster_whisper import WhisperModel
 from piper import PiperVoice
 
 MEDIA_PATH = os.getenv("MEDIA_PATH", "/data")
 
-VOSK_MODEL_PATH = os.getenv("VOSK_MODEL_PATH", "/models/vosk-de")
+WHISPER_MODEL_PATH = os.getenv("WHISPER_MODEL_PATH", "/models/whisper-de")
+WHISPER_DEVICE = os.getenv("WHISPER_DEVICE", "cpu")
+WHISPER_COMPUTE_TYPE = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
+
 PIPER_MODEL_PATH = os.getenv("PIPER_MODEL_PATH", "/models/piper-de.onnx")
 PIPER_CONFIG_PATH = os.getenv(
     "PIPER_CONFIG_PATH", "/models/piper-de.onnx.json"
@@ -38,9 +41,7 @@ CRIES_WAV_CACHE_PATH = os.path.join(MEDIA_PATH, "cries_wav")
 os.makedirs(TTS_CACHE_PATH, exist_ok=True)
 os.makedirs(CRIES_WAV_CACHE_PATH, exist_ok=True)
 
-vosk.SetLogLevel(-1)
-
-_vosk_model = None
+_whisper_model = None
 _piper_voice = None
 
 
@@ -48,18 +49,23 @@ class VoiceUnavailable(Exception):
     """Raised when a required model file isn't present on disk yet."""
 
 
-def get_vosk_model():
-    global _vosk_model
+def get_whisper_model():
+    global _whisper_model
 
-    if _vosk_model is None:
-        if not os.path.isdir(VOSK_MODEL_PATH):
+    if _whisper_model is None:
+        if not os.path.isdir(WHISPER_MODEL_PATH):
             raise VoiceUnavailable(
-                f"Vosk-Modell nicht gefunden unter {VOSK_MODEL_PATH}. "
+                f"Whisper-Modell nicht gefunden unter {WHISPER_MODEL_PATH}. "
                 "backend/scripts/download_models.sh ausführen."
             )
-        _vosk_model = vosk.Model(VOSK_MODEL_PATH)
+        _whisper_model = WhisperModel(
+            WHISPER_MODEL_PATH,
+            device=WHISPER_DEVICE,
+            compute_type=WHISPER_COMPUTE_TYPE,
+            local_files_only=True,
+        )
 
-    return _vosk_model
+    return _whisper_model
 
 
 def get_piper_voice():
@@ -98,7 +104,7 @@ def transcribe_wav(wav_bytes: bytes) -> str:
     The ESP32 firmware fully controls the format it sends, so a WAV that
     doesn't match is rejected rather than resampled/converted.
     """
-    model = get_vosk_model()
+    model = get_whisper_model()
 
     with wave.open(io.BytesIO(wav_bytes), "rb") as wav_file:
         if (
@@ -115,12 +121,21 @@ def transcribe_wav(wav_bytes: bytes) -> str:
 
         frames = wav_file.readframes(wav_file.getnframes())
 
-    recognizer = vosk.KaldiRecognizer(model, SAMPLE_RATE)
-    recognizer.AcceptWaveform(frames)
+    # faster-whisper expects float32 samples in [-1, 1], not raw PCM16.
+    audio = (
+        np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
+    )
 
-    result = json.loads(recognizer.FinalResult())
+    # The fixed ~4s recording window (esp32/pokedex.yaml) has silence
+    # padding around the spoken word; vad_filter trims that instead of
+    # letting Whisper hallucinate text for it.
+    segments, _info = model.transcribe(
+        audio,
+        language="de",
+        vad_filter=True,
+    )
 
-    return (result.get("text") or "").strip()
+    return " ".join(segment.text.strip() for segment in segments).strip()
 
 
 def synthesize_tts(text: str) -> bytes:

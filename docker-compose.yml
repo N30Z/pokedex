@@ -19,7 +19,9 @@ services:
       # Self-hosted German STT/TTS for the ESP32 voice interface (esp32/).
       # Fetch these with backend/scripts/download_models.sh; voice endpoints
       # return 503 until the files exist, the rest of the app is unaffected.
-      VOSK_MODEL_PATH: /models/vosk-de
+      WHISPER_MODEL_PATH: /models/whisper-de
+      WHISPER_DEVICE: cpu
+      WHISPER_COMPUTE_TYPE: int8
       PIPER_MODEL_PATH: /models/piper-de.onnx
       PIPER_CONFIG_PATH: /models/piper-de.onnx.json
 

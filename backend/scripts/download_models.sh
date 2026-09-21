@@ -1,39 +1,39 @@
 #!/usr/bin/env sh
-# Fetches the German Vosk STT model and Piper TTS voice used by
+# Fetches the faster-whisper STT model and Piper TTS voice used by
 # backend/app/voice.py into ./models, so the voice endpoints work.
 #
 # Run once from the repo root: backend/scripts/download_models.sh
 #
-# Picks small/fast default models. For better recognition accuracy, swap
-# VOSK_MODEL_URL for a larger German Vosk model (see alphacephei.com/vosk/models)
-# and re-run.
+# Picks a small/fast default Whisper model (multilingual "small", forced to
+# German at inference time in voice.py). For better recognition accuracy on
+# Pokémon names, swap WHISPER_MODEL_ID for a larger one (e.g.
+# Systran/faster-whisper-medium) and re-run — WHISPER_MODEL_PATH in
+# docker-compose.yml doesn't need to change, only the files underneath it.
 
 set -eu
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 MODELS_DIR="${MODELS_DIR:-$REPO_ROOT/models}"
 
-VOSK_MODEL_URL="${VOSK_MODEL_URL:-https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip}"
+WHISPER_MODEL_ID="${WHISPER_MODEL_ID:-Systran/faster-whisper-small}"
+WHISPER_BASE_URL="https://huggingface.co/${WHISPER_MODEL_ID}/resolve/main"
+
 PIPER_MODEL_URL="${PIPER_MODEL_URL:-https://huggingface.co/rhasspy/piper-voices/resolve/main/de/de_DE/thorsten/medium/de_DE-thorsten-medium.onnx}"
 PIPER_CONFIG_URL="${PIPER_CONFIG_URL:-https://huggingface.co/rhasspy/piper-voices/resolve/main/de/de_DE/thorsten/medium/de_DE-thorsten-medium.onnx.json}"
 
 mkdir -p "$MODELS_DIR"
 
-if [ -d "$MODELS_DIR/vosk-de" ]; then
-    echo "Vosk-Modell bereits vorhanden unter $MODELS_DIR/vosk-de, überspringe."
+WHISPER_DIR="$MODELS_DIR/whisper-de"
+
+if [ -f "$WHISPER_DIR/model.bin" ]; then
+    echo "Whisper-Modell bereits vorhanden unter $WHISPER_DIR, überspringe."
 else
-    echo "Lade Vosk-Modell von $VOSK_MODEL_URL ..."
-    TMP_ZIP="$MODELS_DIR/vosk-de.zip"
-    curl -fL -o "$TMP_ZIP" "$VOSK_MODEL_URL"
-    unzip -q "$TMP_ZIP" -d "$MODELS_DIR"
-    rm "$TMP_ZIP"
-    # The zip extracts to a versioned directory name (e.g. vosk-model-small-de-0.15);
-    # normalize it to the fixed name VOSK_MODEL_PATH expects.
-    EXTRACTED_DIR=$(find "$MODELS_DIR" -maxdepth 1 -type d -name 'vosk-model-*' | head -n 1)
-    if [ -n "$EXTRACTED_DIR" ]; then
-        mv "$EXTRACTED_DIR" "$MODELS_DIR/vosk-de"
-    fi
-    echo "Vosk-Modell installiert unter $MODELS_DIR/vosk-de"
+    echo "Lade Whisper-Modell ($WHISPER_MODEL_ID) ..."
+    mkdir -p "$WHISPER_DIR"
+    for file in config.json model.bin tokenizer.json vocabulary.txt; do
+        curl -fL -o "$WHISPER_DIR/$file" "$WHISPER_BASE_URL/$file"
+    done
+    echo "Whisper-Modell installiert unter $WHISPER_DIR"
 fi
 
 if [ -f "$MODELS_DIR/piper-de.onnx" ] && [ -f "$MODELS_DIR/piper-de.onnx.json" ]; then
