@@ -36,7 +36,7 @@ psram:
   speed: 80MHz
 
 substitutions:
-  backend_base_url: !secret backend_base_url
+  backend_base_url: !secret pokedex_voice__backend_base_url
 
 wifi:
   ssid: !secret wifi_ssid
@@ -47,10 +47,6 @@ logger:
 http_request:
   useragent: pokedex-esp32
   timeout: 15s
-  # Raised from the 1kB default: TTS description WAVs can run a few
-  # hundred KB. capture_response buffers the whole body in RAM (PSRAM),
-  # http_request has no streaming response callback.
-  max_response_buffer_size: 500000
 
 json:
 
@@ -58,6 +54,11 @@ json:
 globals:
   - id: mic_buffer
     type: std::vector<uint8_t>
+  - id: play_buffer
+    type: std::vector<uint8_t>
+  - id: play_offset
+    type: size_t
+    initial_value: "0"
   - id: matched_pokemon_id
     type: int
     initial_value: "0"
@@ -70,17 +71,23 @@ binary_sensor:
   - platform: gpio
     id: wake_button
     pin:
-      number: GPIO33
+      number: GPIO1
       mode: INPUT_PULLUP
       inverted: true
+      # Same pin is the deep_sleep wakeup_pin below.
+      allow_other_uses: true
     on_press:
       - script.execute: run_pokedex_flow
 
 deep_sleep:
   id: deep_sleep_ctl
   wakeup_pin:
-    number: GPIO33
+    number: GPIO1
+    # Keeps the internal pull-up on during deep sleep, so the pin doesn't
+    # float and wake the board spuriously (button just shorts it to GND).
+    mode: INPUT_PULLUP
     inverted: true
+    allow_other_uses: true
   # Safety ceiling in case the flow hangs (e.g. WiFi/backend unreachable);
   # the flow itself calls deep_sleep.enter explicitly once done. Generous
   # enough for recording + recognition + cry/name/description playback +
@@ -90,18 +97,18 @@ deep_sleep:
 # ---- Audio: separate I2S peripherals for mic (record) and amp (play) ----
 i2s_audio:
   - id: i2s_mic_bus
-    i2s_lrclk_pin: GPIO25
-    i2s_bclk_pin: GPIO26
+    i2s_lrclk_pin: GPIO4
+    i2s_bclk_pin: GPIO5
   - id: i2s_speaker_bus
-    i2s_lrclk_pin: GPIO22
-    i2s_bclk_pin: GPIO19
+    i2s_lrclk_pin: GPIO7
+    i2s_bclk_pin: GPIO15
 
 microphone:
   - platform: i2s_audio
     id: mic
     i2s_audio_id: i2s_mic_bus
     adc_type: external
-    i2s_din_pin: GPIO32
+    i2s_din_pin: GPIO6
     channel: left
     sample_rate: 16000
     bits_per_sample: 16bit
@@ -114,7 +121,7 @@ speaker:
     id: spk
     i2s_audio_id: i2s_speaker_bus
     dac_type: external
-    i2s_dout_pin: GPIO21
+    i2s_dout_pin: GPIO16
     channel: mono
     sample_rate: 16000
     bits_per_sample: 16bit
@@ -122,8 +129,8 @@ speaker:
 # ---- Display ----
 spi:
   - id: spi_bus
-    clk_pin: GPIO18
-    mosi_pin: GPIO23
+    clk_pin: GPIO12
+    mosi_pin: GPIO11
 
 font:
   - file: "gfonts://Roboto"
@@ -135,9 +142,9 @@ display:
     id: gc9a01_display
     model: GC9A01A
     dimensions: 240x240
-    cs_pin: GPIO5
-    dc_pin: GPIO16
-    reset_pin: GPIO17
+    cs_pin: GPIO10
+    dc_pin: GPIO9
+    reset_pin: GPIO14
     spi_id: spi_bus
     rotation: 0°
     lambda: |-
@@ -152,7 +159,7 @@ online_image:
 
 # ---- The record -> recognize -> lookup -> display -> play flow ----
 #
-# NOTE: id(spk)->play(pcm) and id(spk)->is_running() call into the
+# NOTE: id(spk)->play(data, len) and id(spk)->is_running() call into the
 # i2s_audio speaker component's C++ API directly from a lambda. Confirm
 # these exact method names against the ESPHome version you build against
 # (`esphome/components/speaker/speaker.h`) before first flash — if they've
@@ -175,7 +182,7 @@ script:
       - component.update: gc9a01_display
       - http_request.post:
           url: "${backend_base_url}/api/voice/recognize"
-          headers:
+          request_headers:
             Content-Type: audio/wav
           body: !lambda |-
             return build_wav_body(id(mic_buffer));
@@ -242,11 +249,36 @@ script:
             return (std::string("${backend_base_url}") + "/api/pokemon/"
                     + std::to_string(id(matched_pokemon_id)) + "/" + wav_path);
           capture_response: true
+          # Raised from the 1kB default: TTS description WAVs can run a few
+          # hundred KB. capture_response buffers the whole body in RAM (PSRAM),
+          # http_request has no streaming response callback.
+          max_response_buffer_size: 500000
           on_response:
             - lambda: |-
-                auto pcm = strip_wav_header(body);
-                if (!pcm.empty()) {
-                  id(spk)->play(pcm);
-                }
+                id(play_buffer) = strip_wav_header(body);
+                id(play_offset) = 0;
+      # The `interval:` below feeds play_buffer into the speaker; done once
+      # it's all been handed over and the speaker has drained and stopped.
       - wait_until:
-          lambda: "return !id(spk)->is_running();"
+          lambda: |-
+            return id(play_offset) >= id(play_buffer).size()
+                && !id(spk)->is_running();
+      - lambda: |-
+          id(play_buffer).clear();
+          id(play_buffer).shrink_to_fit();
+          id(play_offset) = 0;
+
+# Feeds the current WAV (play_buffer) into the speaker a chunk at a time.
+# speaker->play() only accepts as much as fits its ~500ms ring buffer and
+# returns how many bytes it took; looping until it's all written inside one
+# lambda would block ESPHome's main loop for the whole clip and trip the
+# watchdog, so it's topped up from here instead.
+interval:
+  - interval: 20ms
+    then:
+      - lambda: |-
+          auto &buf = id(play_buffer);
+          size_t &off = id(play_offset);
+          if (off < buf.size()) {
+            off += id(spk)->play(buf.data() + off, buf.size() - off);
+          }
