@@ -3,6 +3,8 @@ data/pokedex.db
 data/*.db
 data/*.db-*
 data/sprites/
+data/artwork/
+data/artwork-shiny/
 data/shiny/
 data/cries/
 
