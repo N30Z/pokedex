@@ -2,11 +2,11 @@
 #
 # Button press wakes the board from deep sleep, records ~4s of audio from
 # an INMP441 (I2S mic), POSTs it as a 16kHz mono 16-bit PCM WAV to the
-# backend's /api/voice/recognize, and on a match shows the sprite on a
-# GC9A01 round display, plays the cry, then speaks the name and
-# description (all as WAV from the backend, via a MAX98357A I2S amp).
-# The normal sprite is then shown for 10s, the shiny sprite for another
-# 10s, before returning to deep sleep. See README.md for wiring and setup,
+# backend's /api/voice/recognize, and on a match shows the full-screen
+# artwork on a GC9A01 round display, plays the cry, then speaks the name
+# and description (all as WAV from the backend, via a MAX98357A I2S amp).
+# The normal artwork is then shown for 10s, the shiny one for another
+# 10s, before blanking the screen and returning to deep sleep. See README.md for wiring and setup,
 # and CLAUDE.md ("Voice interface") for the backend side of this contract.
 #
 # Targets a 2025.x-era ESPHome (needs the on_data microphone callback and
@@ -23,10 +23,29 @@ esphome:
   friendly_name: Pokédex Voice
   includes:
     - wav_utils.h
+  on_boot:
+    # ESPHome's psram component builds with CONFIG_SPIRAM_USE_CAPS_ALLOC, so
+    # plain malloc/new (std::vector, std::string) never touches PSRAM and
+    # the ~128KB mic buffer, the POST body and the multi-100KB WAV response
+    # bodies all land in (and exhaust) internal RAM -> abort(). This makes
+    # malloc put anything >16KB in PSRAM, same as CONFIG_SPIRAM_USE_MALLOC.
+    - priority: 1000
+      then:
+        - lambda: heap_caps_malloc_extmem_enable(16384);
+    # The press that wakes the board from deep sleep happens before the
+    # binary_sensor exists, so its on_press never fires for it — without
+    # this the button had to be pressed a second time. A reset/power-on
+    # (wakeup cause UNDEFINED) just idles until a real press.
+    - priority: -100
+      then:
+        - if:
+            condition:
+              lambda: return esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_UNDEFINED;
+            then:
+              - script.execute: run_pokedex_flow
 
 esp32:
-  variant: esp32s3
-  board: esp32s3devkitc1
+  variant: ESP32S3
   flash_size: 16MB
   framework:
     type: esp-idf
@@ -47,6 +66,10 @@ logger:
 http_request:
   useragent: pokedex-esp32
   timeout: 15s
+  # The request blocks the main loop while the backend runs Whisper, which
+  # takes longer than the default 5s task watchdog -> reboot mid-request.
+  # Keep this above `timeout`.
+  watchdog_timeout: 20s
 
 json:
 
@@ -65,6 +88,16 @@ globals:
   - id: status_text
     type: std::string
     initial_value: '"Bereit"'
+  # Set once online_image has a decoded bitmap for the current Pokémon;
+  # until then the status text is shown instead.
+  - id: image_ready
+    type: bool
+    initial_value: "false"
+  # Blank the panel before deep sleep: the module has no BLK pin, so the
+  # backlight can't be switched off, only the pixels made black.
+  - id: screen_off
+    type: bool
+    initial_value: "false"
 
 # ---- Wake button ----
 binary_sensor:
@@ -136,6 +169,9 @@ font:
   - file: "gfonts://Roboto"
     id: font_status
     size: 18
+    # The default glyphset lacks umlauts ("Ich höre zu..." rendered without ö).
+    glyphsets:
+      - GF_Latin_Core
 
 display:
   - platform: mipi_spi
@@ -147,15 +183,40 @@ display:
     reset_pin: GPIO14
     spi_id: spi_bus
     rotation: 0°
+    # This IPS panel needs inversion (black showed as white) with the
+    # model's default BGR order (rgb additionally swapped red/blue).
+    color_order: bgr
+    invert_colors: true
+    # 10MHz took ~100ms per full 240x240 frame, visible as a wipe/flicker.
+    data_rate: 40MHz
+    # Only redraw on explicit component.update. The default 1s refresh
+    # redrew while online_image was still decoding -> flicker.
+    update_interval: never
     lambda: |-
-      it.print(120, 210, id(font_status), TextAlign::CENTER, id(status_text).c_str());
+      if (id(screen_off)) {
+        return;  // auto-clear leaves the frame black
+      }
+      if (id(image_ready)) {
+        // Backend pre-scales to exactly 240x240: fill the whole panel.
+        it.image(0, 0, id(sprite_image));
+        return;
+      }
+      it.print(120, 120, id(font_status), TextAlign::CENTER, id(status_text).c_str());
 
 online_image:
   - id: sprite_image
-    url: "${backend_base_url}/media/sprites/1.png"
+    # Placeholder; never fetched before a match sets the real URL.
+    url: "${backend_base_url}/api/pokemon/1/display.png"
     format: PNG
     type: RGB565
-    resize: 200x200
+    on_download_finished:
+      - lambda: id(image_ready) = true;
+      - component.update: gc9a01_display
+    on_error:
+      - lambda: |-
+          id(image_ready) = false;
+          id(status_text) = "Kein Bild";
+      - component.update: gc9a01_display
 
 # ---- The record -> recognize -> lookup -> display -> play flow ----
 #
@@ -172,6 +233,11 @@ script:
     then:
       - lambda: |-
           id(mic_buffer).clear();
+          // 4s of 16kHz 16-bit mono + slack, so it isn't regrown mid-recording.
+          id(mic_buffer).reserve(160000);
+          id(matched_pokemon_id) = 0;
+          id(image_ready) = false;
+          id(screen_off) = false;
           id(status_text) = "Ich höre zu...";
       - component.update: gc9a01_display
       - microphone.capture: mic
@@ -180,6 +246,12 @@ script:
       - lambda: |-
           id(status_text) = "Suche...";
       - component.update: gc9a01_display
+      # When started straight from the wake-up press (on_boot), WiFi may
+      # still be connecting after the 4s recording.
+      - wait_until:
+          condition:
+            wifi.connected:
+          timeout: 10s
       - http_request.post:
           url: "${backend_base_url}/api/voice/recognize"
           request_headers:
@@ -201,21 +273,27 @@ script:
             lambda: "return id(matched_pokemon_id) != 0;"
           then:
             - script.execute: show_and_speak_pokemon
+            # script.execute doesn't block; without this the flow falls
+            # straight through to deep_sleep.enter below.
+            - script.wait: show_and_speak_pokemon
           else:
             - lambda: 'id(status_text) = "Nicht erkannt";'
             - component.update: gc9a01_display
             - delay: 2s
+      - lambda: id(screen_off) = true;
+      - component.update: gc9a01_display
       - deep_sleep.enter: deep_sleep_ctl
 
   - id: show_and_speak_pokemon
     then:
       - lambda: 'id(status_text) = "Gefunden!";'
+      - component.update: gc9a01_display
+      # set_url starts the download; on_download_finished draws it.
       - online_image.set_url:
           id: sprite_image
           url: !lambda |-
-            return (std::string("${backend_base_url}") + "/media/sprites/"
-                    + std::to_string(id(matched_pokemon_id)) + ".png");
-      - component.update: gc9a01_display
+            return (std::string("${backend_base_url}") + "/api/pokemon/"
+                    + std::to_string(id(matched_pokemon_id)) + "/display.png");
       - script.execute:
           id: play_remote_wav
           wav_path: "cry.wav"
@@ -231,13 +309,12 @@ script:
       # Show the normal sprite for 10s, then the shiny variant for 10s,
       # then hand back to run_pokedex_flow's deep_sleep.enter.
       - delay: 10s
-      - lambda: 'id(status_text) = "Schillernd!";'
+      # The normal image stays on screen until the shiny one has decoded.
       - online_image.set_url:
           id: sprite_image
           url: !lambda |-
-            return (std::string("${backend_base_url}") + "/media/shiny/"
-                    + std::to_string(id(matched_pokemon_id)) + ".png");
-      - component.update: gc9a01_display
+            return (std::string("${backend_base_url}") + "/api/pokemon/"
+                    + std::to_string(id(matched_pokemon_id)) + "/display.png?shiny=true");
       - delay: 10s
 
   - id: play_remote_wav

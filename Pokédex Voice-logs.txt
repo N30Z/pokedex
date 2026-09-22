@@ -1,0 +1,396 @@
+[20:57:39]ESP-ROM:esp32s3-20210327
+[20:57:39]Build:Mar 27 2021
+[20:57:39]rst:0x15 (USB_UART_CHIP_RESET),boot:0x8 (SPI_FAST_FLASH_BOOT)
+[20:57:39]Saved PC:0x42027e3e
+[20:57:39]SPIWP:0xee
+[20:57:39]mode:DIO, clock div:1
+[20:57:39]load:0x3fce2820,len:0x1510
+[20:57:39]load:0x403c8700,len:0xccc
+[20:57:39]load:0x403cb700,len:0x2ef0
+[20:57:39]entry 0x403c8914
+[20:57:39]I (24) boot: ESP-IDF 5.5.4 2nd stage bootloader
+[20:57:39]I (24) boot: Multicore bootloader
+[20:57:39]I (25) boot: chip revision: v0.2
+[20:57:39]I (25) boot: efuse block revision: v1.4
+[20:57:39]I (25) boot.esp32s3: Boot SPI Speed : 80MHz
+[20:57:39]I (25) boot.esp32s3: SPI Mode       : DIO
+[20:57:39]I (25) boot.esp32s3: SPI Flash Size : 16MB
+[20:57:39]I (26) boot: Enabling RNG early entropy source...
+[20:57:39]I (26) boot: Partition Table:
+[20:57:39]I (26) boot: ## Label            Usage          Type ST Offset   Length
+[20:57:39]I (26) boot:  0 otadata          OTA data         01 00 00009000 00002000
+[20:57:39]I (27) boot:  1 phy_init         RF data          01 01 0000b000 00001000
+[20:57:39]I (27) boot:  2 app0             OTA app          00 10 00010000 007c0000
+[20:57:39]I (28) boot:  3 app1             OTA app          00 11 007d0000 007c0000
+[20:57:39]I (28) boot:  4 nvs              WiFi data        01 02 00f90000 00070000
+[20:57:39]I (28) boot: End of partition table
+[20:57:39]I (29) esp_image: segment 0: paddr=00010020 vaddr=3c0b0020 size=29968h (170344) map
+[20:57:39]I (59) esp_image: segment 1: paddr=00039990 vaddr=3fc97600 size=04dd8h ( 19928) load
+[20:57:39]I (64) esp_image: segment 2: paddr=0003e770 vaddr=40374000 size=018a8h (  6312) load
+[20:57:39]I (65) esp_image: segment 3: paddr=00040020 vaddr=42000020 size=a3234h (668212) map
+[20:57:39]I (184) esp_image: segment 4: paddr=000e325c vaddr=403758a8 size=11c58h ( 72792) load
+[20:57:39]I (200) esp_image: segment 5: paddr=000f4ebc vaddr=50000000 size=00020h (    32) load
+[20:57:39]I (200) esp_image: segment 6: paddr=000f4ee4 vaddr=600fe000 size=00060h (    96) load
+[20:57:39]I (208) boot: Loaded app from partition at offset 0x10000
+[20:57:39]I (208) boot: Disabling RNG early entropy source...
+[20:57:39][I][logger:122]: Log initialized
+[20:57:39][I][app:060]: Running through setup()
+[20:57:39][D][spi_device:395]: mode 0, data_rate 10000kHz
+[20:57:39][D][display.mipi_spi:260]: Command EF, length 0, bytes 
+[20:57:39][D][display.mipi_spi:260]: Command EB, length 1, bytes 14
+[20:57:39][D][display.mipi_spi:260]: Command FE, length 0, bytes 
+[20:57:40][D][display.mipi_spi:260]: Command EF, length 0, bytes 
+[20:57:40][D][display.mipi_spi:260]: Command EB, length 1, bytes 14
+[20:57:40][D][display.mipi_spi:260]: Command 84, length 1, bytes 40
+[20:57:40][D][display.mipi_spi:260]: Command 85, length 1, bytes FF
+[20:57:40][D][display.mipi_spi:260]: Command 86, length 1, bytes FF
+[20:57:40][D][display.mipi_spi:260]: Command 87, length 1, bytes FF
+[20:57:40][D][display.mipi_spi:260]: Command 88, length 1, bytes 0A
+[20:57:40][D][display.mipi_spi:260]: Command 89, length 1, bytes 21
+[20:57:40][D][display.mipi_spi:260]: Command 8A, length 1, bytes 00
+[20:57:40][D][display.mipi_spi:260]: Command 8B, length 1, bytes 80
+[20:57:40][D][display.mipi_spi:260]: Command 8C, length 1, bytes 01
+[20:57:40][D][display.mipi_spi:260]: Command 8D, length 1, bytes 01
+[20:57:40][D][display.mipi_spi:260]: Command 8E, length 1, bytes FF
+[20:57:40][D][display.mipi_spi:260]: Command 8F, length 1, bytes FF
+[20:57:40][D][display.mipi_spi:260]: Command B6, length 2, bytes 00:00
+[20:57:40][D][display.mipi_spi:260]: Command 90, length 4, bytes 08:08:08:08
+[20:57:40][D][display.mipi_spi:260]: Command BD, length 1, bytes 06
+[20:57:40][D][display.mipi_spi:260]: Command BC, length 1, bytes 00
+[20:57:40][D][display.mipi_spi:260]: Command FF, length 3, bytes 60:01:04
+[20:57:40][D][display.mipi_spi:260]: Command C3, length 1, bytes 13
+[20:57:40][D][display.mipi_spi:260]: Command C4, length 1, bytes 13
+[20:57:40][D][display.mipi_spi:260]: Command F9, length 1, bytes 22
+[20:57:40][D][display.mipi_spi:260]: Command BE, length 1, bytes 11
+[20:57:40][D][display.mipi_spi:260]: Command E1, length 2, bytes 10:0E
+[20:57:40][D][display.mipi_spi:260]: Command DF, length 3, bytes 21:0C:02
+[20:57:40][D][display.mipi_spi:260]: Command F0, length 6, bytes 45:09:08:08:26:2A
+[20:57:40][D][display.mipi_spi:260]: Command F1, length 6, bytes 43:70:72:36:37:6F
+[20:57:40][D][display.mipi_spi:260]: Command F2, length 6, bytes 45:09:08:08:26:2A
+[20:57:40][D][display.mipi_spi:260]: Command F3, length 6, bytes 43:70:72:36:37:6F
+[20:57:40][D][display.mipi_spi:260]: Command ED, length 2, bytes 1B:0B
+[20:57:40][D][display.mipi_spi:260]: Command AE, length 1, bytes 77
+[20:57:40][D][display.mipi_spi:260]: Command CD, length 1, bytes 63
+[20:57:40][D][display.mipi_spi:260]: Command E8, length 1, bytes 34
+[20:57:40][D][display.mipi_spi:260]: Command 62, length 12, bytes 18:0D:71:ED:70:70:18:0F:71:EF:70:70
+[20:57:40][D][display.mipi_spi:260]: Command 63, length 12, bytes 18:11:71:F1:70:70:18:13:71:F3:70:70
+[20:57:40][D][display.mipi_spi:260]: Command 64, length 7, bytes 28:29:F1:01:F1:00:07
+[20:57:40][D][display.mipi_spi:260]: Command 66, length 10, bytes 3C:00:CD:67:45:45:10:00:00:00
+[20:57:40][D][display.mipi_spi:260]: Command 67, length 10, bytes 00:3C:00:00:00:01:54:10:32:98
+[20:57:40][D][display.mipi_spi:260]: Command 74, length 7, bytes 10:85:80:00:00:4E:00
+[20:57:40][D][display.mipi_spi:260]: Command 98, length 2, bytes 3E:07
+[20:57:40][D][display.mipi_spi:260]: Command 35, length 0, bytes 
+[20:57:40][D][display.mipi_spi:260]: Command 3A, length 1, bytes 55
+[20:57:40][D][display.mipi_spi:260]: Command 20, length 0, bytes 
+[20:57:40][D][display.mipi_spi:185]: Sleep 57ms
+[20:57:40][D][display.mipi_spi:260]: Command 11, length 0, bytes 
+[20:57:40][D][display.mipi_spi:260]: Command 29, length 0, bytes 
+[20:57:40][D][display.mipi_spi:260]: Command 20, length 0, bytes 
+[20:57:40][D][display.mipi_spi:334]: Setting MADCTL for rotation 0, value 48
+[20:57:40][D][display.mipi_spi:260]: Command 36, length 1, bytes 48
+[20:57:40][C][component:237]: Setup display took 147ms
+[20:57:40][C][wifi:645]: Starting
+[20:57:40][D][wifi:1303]: Starting scan
+[20:57:40][C][component:237]: Setup wifi took 60ms
+[20:57:40][I][deep_sleep:022]: Scheduling in 90000 ms
+[20:57:40][I][app:117]: setup() finished successfully!
+[20:57:40][W][component:513]: display took a long time for an operation (100 ms), max is 50 ms
+[20:57:40][W][component:382]: wifi set Warning flag: scanning for networks
+[20:57:40][I][app:151]: ESPHome version 2026.6.2 compiled on 2026-09-22 20:56:17 +0200
+[20:57:40][I][app:158]: ESP32 Chip: ESP32-S3 rev0.2, 2 core(s)
+[20:57:40][C][logger:223]: Logger:
+[20:57:40][C][logger:223]:   Max Level: DEBUG
+[20:57:40][C][logger:223]:   Initial Level: DEBUG
+[20:57:40][C][logger:230]:   Log Baud Rate: 115200
+[20:57:40][C][logger:230]:   Hardware UART: USB_SERIAL_JTAG
+[20:57:40][C][logger:239]:   Task Log Buffer Size: 768 bytes
+[20:57:40][C][spi:066]: SPI bus:
+[20:57:40][C][spi:152]:   CLK Pin: GPIO12
+[20:57:40][C][spi:152]:   SDI Pin: 
+[20:57:40][C][spi:152]:   SDO Pin: GPIO11
+[20:57:40][C][spi:074]:   Using HW SPI: SPI2_HOST
+[20:57:40][C][gpio.binary_sensor:016]: GPIO Binary Sensor 'wake_button'
+[20:57:40][C][gpio.binary_sensor:152]:   Pin: GPIO1
+[20:57:40][C][gpio.binary_sensor:061]:   Mode: interrupt
+[20:57:40][C][gpio.binary_sensor:063]:   Interrupt Type: ANY_EDGE
+[20:57:40][C][psram:015]: PSRAM:
+[20:57:40][C][psram:018]:   Available: YES
+[20:57:40][C][psram:020]:   Size: 8192 KB
+[20:57:40][C][i2s_audio.microphone:053]: Microphone:
+[20:57:40][C][i2s_audio.microphone:053]:   Pin: 6
+[20:57:40][C][i2s_audio.microphone:053]:   PDM: NO
+[20:57:40][C][i2s_audio.microphone:053]:   DC offset correction: NO
+[20:57:40][C][display.mipi_spi:010]: MIPI_SPI Display
+[20:57:40][C][display.mipi_spi:010]:   Model: GC9A01A
+[20:57:40][C][display.mipi_spi:010]:   Width: 240
+[20:57:40][C][display.mipi_spi:010]:   Height: 240
+[20:57:40][C][display.mipi_spi:010]:   Swap X/Y: NO
+[20:57:40][C][display.mipi_spi:010]:   Mirror X: YES
+[20:57:40][C][display.mipi_spi:010]:   Mirror Y: NO
+[20:57:40][C][display.mipi_spi:010]:   Hardware rotation: YES
+[20:57:40][C][display.mipi_spi:010]:   Invert colors: NO
+[20:57:40][C][display.mipi_spi:010]:   Color order: BGR
+[20:57:40][C][display.mipi_spi:010]:   Display pixels: 16 bits
+[20:57:40][C][display.mipi_spi:010]:   Endianness: Big
+[20:57:40][C][display.mipi_spi:010]:   SPI Mode: 0
+[20:57:40][C][display.mipi_spi:010]:   SPI Data rate: 10MHz
+[20:57:40][C][display.mipi_spi:010]:   SPI Bus width: 1
+[20:57:40][C][display.mipi_spi:152]:   CS Pin: GPIO10
+[20:57:40][C][display.mipi_spi:152]:   Reset Pin: GPIO14
+[20:57:40][C][display.mipi_spi:152]:   DC Pin: GPIO9
+[20:57:40][C][display.mipi_spi:542]:   Rotation: 0°
+[20:57:40][C][display.mipi_spi:542]:   Buffer pixels: 16 bits
+[20:57:40][C][display.mipi_spi:542]:   Buffer fraction: 1/1
+[20:57:40][C][display.mipi_spi:542]:   Buffer bytes: 115200
+[20:57:40][C][display.mipi_spi:542]:   Draw rounding: 1
+[20:57:40][C][i2s_audio.speaker:043]: Speaker:
+[20:57:40][C][i2s_audio.speaker:043]:   Pin: 16
+[20:57:40][C][i2s_audio.speaker:043]:   Buffer duration: 500
+[20:57:40][C][i2s_audio.speaker:049]:   Timeout: 500 ms
+[20:57:40][C][i2s_audio.speaker.std:064]:   Communication format: std
+[20:57:40][C][wifi:1531]: WiFi:
+[20:57:40][C][wifi:1531]:   Local MAC: 28:84:85:4D:1E:54
+[20:57:40][C][wifi:1531]:   Connected: NO
+[20:57:40][C][http_request:012]: HTTP Request:
+[20:57:40][C][http_request:012]:   Timeout: 15000ms
+[20:57:40][C][http_request:012]:   User-Agent: pokedex-esp32
+[20:57:40][C][http_request:012]:   Follow redirects: YES
+[20:57:40][C][http_request:012]:   Redirect limit: 3
+[20:57:40][C][http_request.idf:029]:   Buffer Size RX: 512
+[20:57:40][C][http_request.idf:029]:   Buffer Size TX: 512
+[20:57:40][C][http_request.idf:029]:   Custom CA Certificate: NO
+[20:57:40][C][mdns:230]: mDNS:
+[20:57:40][C][mdns:230]:   Hostname: pokedex-voice
+[20:57:40][C][deep_sleep:030]: Deep sleep:
+[20:57:40][C][deep_sleep:036]:   Run Duration: 90000 ms
+[20:57:40][C][deep_sleep:152]:   Wakeup Pin: GPIO1
+[20:57:42][D][wifi:1463]: Found networks:
+[20:57:42][I][wifi:1434]: - 'FeBu' (DC:15:C8:C3:90:E6) ▂▄▆█ Ch:11 -69dB P:0
+[20:57:42][I][wifi:1434]: - 'FeBu' (2C:3A:FD:C9:E6:83) ▂▄▆█ Ch:11 -84dB P:0
+[20:57:42][D][wifi:1857]: Retry phase: INITIAL_CONNECT → SCAN_CONNECTING
+[20:57:42][I][wifi:1097]: Connecting to 'FeBu' (DC:15:C8:C3:90:E6) (priority 0, attempt 1/2 in phase SCAN_CONNECTING)...
+[20:57:42][W][wifi_esp32:811]: Disconnected ssid='FeBu' bssid=DC:15:C8:C3:90:E6 reason='Authentication Failed'
+[20:57:42][W][wifi:1678]: Connecting to network failed (callback)
+[20:57:42][D][wifi:2037]: Failed 'FeBu' (DC:15:C8:C3:90:E6), priority 0 → 0
+[20:57:42][D][wifi:2108]: Retry attempt 2/2 in phase SCAN_CONNECTING
+[20:57:42][I][wifi:1097]: Connecting to 'FeBu' (DC:15:C8:C3:90:E6) (priority 0, attempt 2/2 in phase SCAN_CONNECTING)...
+[20:57:44][I][wifi:1575]: Connected
+[20:57:44][C][wifi:1237]:   IP Address: 192.168.179.75
+[20:57:44][C][wifi:1248]:   SSID: 'FeBu'
+[20:57:44][C][wifi:1248]:   BSSID: DC:15:C8:C3:90:E6
+[20:57:44][C][wifi:1248]:   Hostname: 'pokedex-voice'
+[20:57:44][C][wifi:1248]:   Signal strength: -70 dB ▂▄▆█
+[20:57:44][C][wifi:1248]:   Channel: 11
+[20:57:44][C][wifi:1248]:   Subnet: 255.255.255.0
+[20:57:44][C][wifi:1248]:   Gateway: 192.168.179.1
+[20:57:44][C][wifi:1248]:   DNS1: 192.168.179.59
+[20:57:44][C][wifi:1248]:   DNS2: 0.0.0.0
+[20:57:44][W][component:405]: wifi cleared Warning flag
+[20:57:50][W][component:513]: gpio.binary_sensor took a long time for an operation (100 ms), max is 50 ms
+[20:57:58]E (20947) task_wdt: Task watchdog got triggered. The following tasks/users did not reset the watchdog in time:
+[20:57:58]E (20947) task_wdt:  - loopTask (CPU 1)
+[20:57:58]E (20947) task_wdt: Tasks currently running:
+[20:57:58]E (20947) task_wdt: CPU 0: IDLE0
+[20:57:58]E (20947) task_wdt: CPU 1: IDLE1
+[20:57:58]E (20947) task_wdt: Aborting.
+[20:57:58]E (20947) task_wdt: Print CPU 1 backtrace
+[20:57:58]
+[20:57:58]
+[20:57:58]
+[20:57:58]
+[20:57:58]Backtrace: 0x40379c87:0x3fca8780 0x4209f8d1:0x3fca87a0 0x420a161b:0x3fca87c0
+[20:57:58]
+[20:57:58]
+[20:57:58]
+[20:57:58]
+[20:57:58]ELF file SHA256: fae1d5a87
+[20:57:58]
+[20:57:58]Rebooting...
+[20:57:58]ESP-ROM:esp32s3-20210327
+[20:57:58]Build:Mar 27 2021
+[20:57:58]rst:0xc (RTC_SW_CPU_RST),boot:0x8 (SPI_FAST_FLASH_BOOT)
+[20:57:58]Saved PC:0x42028f94
+[20:57:58]SPIWP:0xee
+[20:57:58]mode:DIO, clock div:1
+[20:57:58]load:0x3fce2820,len:0x1510
+[20:57:58]load:0x403c8700,len:0xccc
+[20:57:58]load:0x403cb700,len:0x2ef0
+[20:57:58]entry 0x403c8914
+[20:57:59]I (24) boot: ESP-IDF 5.5.4 2nd stage bootloader
+[20:57:59]I (24) boot: Multicore bootloader
+[20:57:59]I (24) boot: chip revision: v0.2
+[20:57:59]I (24) boot: efuse block revision: v1.4
+[20:57:59]I (25) boot.esp32s3: Boot SPI Speed : 80MHz
+[20:57:59]I (25) boot.esp32s3: SPI Mode       : DIO
+[20:57:59]I (25) boot.esp32s3: SPI Flash Size : 16MB
+[20:57:59]I (25) boot: Enabling RNG early entropy source...
+[20:57:59]I (25) boot: Partition Table:
+[20:57:59]I (25) boot: ## Label            Usage          Type ST Offset   Length
+[20:57:59]I (26) boot:  0 otadata          OTA data         01 00 00009000 00002000
+[20:57:59]I (26) boot:  1 phy_init         RF data          01 01 0000b000 00001000
+[20:57:59]I (26) boot:  2 app0             OTA app          00 10 00010000 007c0000
+[20:57:59]I (27) boot:  3 app1             OTA app          00 11 007d0000 007c0000
+[20:57:59]I (27) boot:  4 nvs              WiFi data        01 02 00f90000 00070000
+[20:57:59]I (28) boot: End of partition table
+[20:57:59]I (28) esp_image: segment 0: paddr=00010020 vaddr=3c0b0020 size=29968h (170344) map
+[20:57:59]I (59) esp_image: segment 1: paddr=00039990 vaddr=3fc97600 size=04dd8h ( 19928) load
+[20:57:59]I (63) esp_image: segment 2: paddr=0003e770 vaddr=40374000 size=018a8h (  6312) load
+[20:57:59]I (65) esp_image: segment 3: paddr=00040020 vaddr=42000020 size=a3234h (668212) map
+[20:57:59]I (184) esp_image: segment 4: paddr=000e325c vaddr=403758a8 size=11c58h ( 72792) load
+[20:57:59]I (200) esp_image: segment 5: paddr=000f4ebc vaddr=50000000 size=00020h (    32) load
+[20:57:59]I (200) esp_image: segment 6: paddr=000f4ee4 vaddr=600fe000 size=00060h (    96) load
+[20:57:59]I (208) boot: Loaded app from partition at offset 0x10000
+[20:57:59]I (209) boot: Disabling RNG early entropy source...
+[20:57:59][I][logger:122]: Log initialized
+[20:57:59][I][app:060]: Running through setup()
+[20:57:59][D][spi_device:395]: mode 0, data_rate 10000kHz
+[20:57:59][D][display.mipi_spi:260]: Command EF, length 0, bytes 
+[20:57:59][D][display.mipi_spi:260]: Command EB, length 1, bytes 14
+[20:57:59][D][display.mipi_spi:260]: Command FE, length 0, bytes 
+[20:57:59][D][display.mipi_spi:260]: Command EF, length 0, bytes 
+[20:57:59][D][display.mipi_spi:260]: Command EB, length 1, bytes 14
+[20:57:59][D][display.mipi_spi:260]: Command 84, length 1, bytes 40
+[20:57:59][D][display.mipi_spi:260]: Command 85, length 1, bytes FF
+[20:57:59][D][display.mipi_spi:260]: Command 86, length 1, bytes FF
+[20:57:59][D][display.mipi_spi:260]: Command 87, length 1, bytes FF
+[20:57:59][D][display.mipi_spi:260]: Command 88, length 1, bytes 0A
+[20:57:59][D][display.mipi_spi:260]: Command 89, length 1, bytes 21
+[20:57:59][D][display.mipi_spi:260]: Command 8A, length 1, bytes 00
+[20:57:59][D][display.mipi_spi:260]: Command 8B, length 1, bytes 80
+[20:57:59][D][display.mipi_spi:260]: Command 8C, length 1, bytes 01
+[20:57:59][D][display.mipi_spi:260]: Command 8D, length 1, bytes 01
+[20:57:59][D][display.mipi_spi:260]: Command 8E, length 1, bytes FF
+[20:57:59][D][display.mipi_spi:260]: Command 8F, length 1, bytes FF
+[20:57:59][D][display.mipi_spi:260]: Command B6, length 2, bytes 00:00
+[20:57:59][D][display.mipi_spi:260]: Command 90, length 4, bytes 08:08:08:08
+[20:57:59][D][display.mipi_spi:260]: Command BD, length 1, bytes 06
+[20:57:59][D][display.mipi_spi:260]: Command BC, length 1, bytes 00
+[20:57:59][D][display.mipi_spi:260]: Command FF, length 3, bytes 60:01:04
+[20:57:59][D][display.mipi_spi:260]: Command C3, length 1, bytes 13
+[20:57:59][D][display.mipi_spi:260]: Command C4, length 1, bytes 13
+[20:57:59][D][display.mipi_spi:260]: Command F9, length 1, bytes 22
+[20:57:59][D][display.mipi_spi:260]: Command BE, length 1, bytes 11
+[20:57:59][D][display.mipi_spi:260]: Command E1, length 2, bytes 10:0E
+[20:57:59][D][display.mipi_spi:260]: Command DF, length 3, bytes 21:0C:02
+[20:57:59][D][display.mipi_spi:260]: Command F0, length 6, bytes 45:09:08:08:26:2A
+[20:57:59][D][display.mipi_spi:260]: Command F1, length 6, bytes 43:70:72:36:37:6F
+[20:57:59][D][display.mipi_spi:260]: Command F2, length 6, bytes 45:09:08:08:26:2A
+[20:57:59][D][display.mipi_spi:260]: Command F3, length 6, bytes 43:70:72:36:37:6F
+[20:57:59][D][display.mipi_spi:260]: Command ED, length 2, bytes 1B:0B
+[20:57:59][D][display.mipi_spi:260]: Command AE, length 1, bytes 77
+[20:57:59][D][display.mipi_spi:260]: Command CD, length 1, bytes 63
+[20:57:59][D][display.mipi_spi:260]: Command E8, length 1, bytes 34
+[20:57:59][D][display.mipi_spi:260]: Command 62, length 12, bytes 18:0D:71:ED:70:70:18:0F:71:EF:70:70
+[20:57:59][D][display.mipi_spi:260]: Command 63, length 12, bytes 18:11:71:F1:70:70:18:13:71:F3:70:70
+[20:57:59][D][display.mipi_spi:260]: Command 64, length 7, bytes 28:29:F1:01:F1:00:07
+[20:57:59][D][display.mipi_spi:260]: Command 66, length 10, bytes 3C:00:CD:67:45:45:10:00:00:00
+[20:57:59][D][display.mipi_spi:260]: Command 67, length 10, bytes 00:3C:00:00:00:01:54:10:32:98
+[20:57:59][D][display.mipi_spi:260]: Command 74, length 7, bytes 10:85:80:00:00:4E:00
+[20:57:59][D][display.mipi_spi:260]: Command 98, length 2, bytes 3E:07
+[20:57:59][D][display.mipi_spi:260]: Command 35, length 0, bytes 
+[20:57:59][D][display.mipi_spi:260]: Command 3A, length 1, bytes 55
+[20:57:59][D][display.mipi_spi:260]: Command 20, length 0, bytes 
+[20:57:59][D][display.mipi_spi:185]: Sleep 57ms
+[20:57:59][D][display.mipi_spi:260]: Command 11, length 0, bytes 
+[20:57:59][D][display.mipi_spi:260]: Command 29, length 0, bytes 
+[20:57:59][D][display.mipi_spi:260]: Command 20, length 0, bytes 
+[20:57:59][D][display.mipi_spi:334]: Setting MADCTL for rotation 0, value 48
+[20:57:59][D][display.mipi_spi:260]: Command 36, length 1, bytes 48
+[20:57:59][C][component:237]: Setup display took 148ms
+[20:57:59][C][wifi:645]: Starting
+[20:57:59][D][wifi:1303]: Starting scan
+[20:57:59][C][component:237]: Setup wifi took 52ms
+[20:57:59][I][deep_sleep:022]: Scheduling in 90000 ms
+[20:57:59][I][app:117]: setup() finished successfully!
+[20:58:00][W][component:513]: display took a long time for an operation (100 ms), max is 50 ms
+[20:58:00][W][component:382]: wifi set Warning flag: scanning for networks
+[20:58:00][I][app:151]: ESPHome version 2026.6.2 compiled on 2026-09-22 20:56:17 +0200
+[20:58:00][I][app:158]: ESP32 Chip: ESP32-S3 rev0.2, 2 core(s)
+[20:58:00][C][logger:223]: Logger:
+[20:58:00][C][logger:223]:   Max Level: DEBUG
+[20:58:00][C][logger:223]:   Initial Level: DEBUG
+[20:58:00][C][logger:230]:   Log Baud Rate: 115200
+[20:58:00][C][logger:230]:   Hardware UART: USB_SERIAL_JTAG
+[20:58:00][C][logger:239]:   Task Log Buffer Size: 768 bytes
+[20:58:00][C][spi:066]: SPI bus:
+[20:58:00][C][spi:152]:   CLK Pin: GPIO12
+[20:58:00][C][spi:152]:   SDI Pin: 
+[20:58:00][C][spi:152]:   SDO Pin: GPIO11
+[20:58:00][C][spi:074]:   Using HW SPI: SPI2_HOST
+[20:58:00][C][gpio.binary_sensor:016]: GPIO Binary Sensor 'wake_button'
+[20:58:00][C][gpio.binary_sensor:152]:   Pin: GPIO1
+[20:58:00][C][gpio.binary_sensor:061]:   Mode: interrupt
+[20:58:00][C][gpio.binary_sensor:063]:   Interrupt Type: ANY_EDGE
+[20:58:00][C][psram:015]: PSRAM:
+[20:58:00][C][psram:018]:   Available: YES
+[20:58:00][C][psram:020]:   Size: 8192 KB
+[20:58:00][C][i2s_audio.microphone:053]: Microphone:
+[20:58:00][C][i2s_audio.microphone:053]:   Pin: 6
+[20:58:00][C][i2s_audio.microphone:053]:   PDM: NO
+[20:58:00][C][i2s_audio.microphone:053]:   DC offset correction: NO
+[20:58:00][C][display.mipi_spi:010]: MIPI_SPI Display
+[20:58:00][C][display.mipi_spi:010]:   Model: GC9A01A
+[20:58:00][C][display.mipi_spi:010]:   Width: 240
+[20:58:00][C][display.mipi_spi:010]:   Height: 240
+[20:58:00][C][display.mipi_spi:010]:   Swap X/Y: NO
+[20:58:00][C][display.mipi_spi:010]:   Mirror X: YES
+[20:58:00][C][display.mipi_spi:010]:   Mirror Y: NO
+[20:58:00][C][display.mipi_spi:010]:   Hardware rotation: YES
+[20:58:00][C][display.mipi_spi:010]:   Invert colors: NO
+[20:58:00][C][display.mipi_spi:010]:   Color order: BGR
+[20:58:00][C][display.mipi_spi:010]:   Display pixels: 16 bits
+[20:58:00][C][display.mipi_spi:010]:   Endianness: Big
+[20:58:00][C][display.mipi_spi:010]:   SPI Mode: 0
+[20:58:00][C][display.mipi_spi:010]:   SPI Data rate: 10MHz
+[20:58:00][C][display.mipi_spi:010]:   SPI Bus width: 1
+[20:58:00][C][display.mipi_spi:152]:   CS Pin: GPIO10
+[20:58:00][C][display.mipi_spi:152]:   Reset Pin: GPIO14
+[20:58:00][C][display.mipi_spi:152]:   DC Pin: GPIO9
+[20:58:00][C][display.mipi_spi:542]:   Rotation: 0°
+[20:58:00][C][display.mipi_spi:542]:   Buffer pixels: 16 bits
+[20:58:00][C][display.mipi_spi:542]:   Buffer fraction: 1/1
+[20:58:00][C][display.mipi_spi:542]:   Buffer bytes: 115200
+[20:58:00][C][display.mipi_spi:542]:   Draw rounding: 1
+[20:58:00][C][i2s_audio.speaker:043]: Speaker:
+[20:58:00][C][i2s_audio.speaker:043]:   Pin: 16
+[20:58:00][C][i2s_audio.speaker:043]:   Buffer duration: 500
+[20:58:00][C][i2s_audio.speaker:049]:   Timeout: 500 ms
+[20:58:00][C][i2s_audio.speaker.std:064]:   Communication format: std
+[20:58:00][C][wifi:1531]: WiFi:
+[20:58:00][C][wifi:1531]:   Local MAC: 28:84:85:4D:1E:54
+[20:58:00][C][wifi:1531]:   Connected: NO
+[20:58:00][C][http_request:012]: HTTP Request:
+[20:58:00][C][http_request:012]:   Timeout: 15000ms
+[20:58:00][C][http_request:012]:   User-Agent: pokedex-esp32
+[20:58:00][C][http_request:012]:   Follow redirects: YES
+[20:58:00][C][http_request:012]:   Redirect limit: 3
+[20:58:00][C][http_request.idf:029]:   Buffer Size RX: 512
+[20:58:00][C][http_request.idf:029]:   Buffer Size TX: 512
+[20:58:00][C][http_request.idf:029]:   Custom CA Certificate: NO
+[20:58:00][C][mdns:230]: mDNS:
+[20:58:00][C][mdns:230]:   Hostname: pokedex-voice
+[20:58:00][C][deep_sleep:030]: Deep sleep:
+[20:58:00][C][deep_sleep:036]:   Run Duration: 90000 ms
+[20:58:00][C][deep_sleep:152]:   Wakeup Pin: GPIO1
+[20:58:02][D][wifi:1463]: Found networks:
+[20:58:02][I][wifi:1434]: - 'FeBu' (DC:15:C8:C3:90:E6) ▂▄▆█ Ch:11 -69dB P:0
+[20:58:02][I][wifi:1434]: - 'FeBu' (2C:3A:FD:C9:E6:83) ▂▄▆█ Ch:11 -80dB P:0
+[20:58:02][D][wifi:1857]: Retry phase: INITIAL_CONNECT → SCAN_CONNECTING
+[20:58:02][I][wifi:1097]: Connecting to 'FeBu' (DC:15:C8:C3:90:E6) (priority 0, attempt 1/2 in phase SCAN_CONNECTING)...
+[20:58:02][W][wifi_esp32:811]: Disconnected ssid='FeBu' bssid=DC:15:C8:C3:90:E6 reason='Authentication Failed'
+[20:58:02][W][wifi:1678]: Connecting to network failed (callback)
+[20:58:02][D][wifi:2037]: Failed 'FeBu' (DC:15:C8:C3:90:E6), priority 0 → 0
+[20:58:02][D][wifi:2108]: Retry attempt 2/2 in phase SCAN_CONNECTING
+[20:58:02][I][wifi:1097]: Connecting to 'FeBu' (DC:15:C8:C3:90:E6) (priority 0, attempt 2/2 in phase SCAN_CONNECTING)...
+[20:58:03][I][wifi:1575]: Connected
+[20:58:03][C][wifi:1237]:   IP Address: 192.168.179.75
+[20:58:03][C][wifi:1248]:   SSID: 'FeBu'
+[20:58:03][C][wifi:1248]:   BSSID: DC:15:C8:C3:90:E6
+[20:58:03][C][wifi:1248]:   Hostname: 'pokedex-voice'
+[20:58:03][C][wifi:1248]:   Signal strength: -71 dB ▂▄▆█
+[20:58:03][C][wifi:1248]:   Channel: 11
+[20:58:03][C][wifi:1248]:   Subnet: 255.255.255.0
+[20:58:03][C][wifi:1248]:   Gateway: 192.168.179.1
+[20:58:03][C][wifi:1248]:   DNS1: 192.168.179.59
+[20:58:03][C][wifi:1248]:   DNS2: 0.0.0.0
+[20:58:03][W][component:405]: wifi cleared Warning flag

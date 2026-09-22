@@ -474,6 +474,41 @@ def get_pokemon_cry_wav(identifier: str):
         db.close()
 
 
+@app.get("/api/pokemon/{identifier}/display.png")
+def get_pokemon_display_image(identifier: str, shiny: bool = False):
+    db = SessionLocal()
+
+    try:
+        pokemon = _get_pokemon_or_404(db, identifier)
+
+        # Shiny artwork is missing for some forms; fall back to the normal one.
+        candidates = (["artwork-shiny"] if shiny else []) + ["artwork"]
+        src_path = None
+        folder = None
+
+        for folder in candidates:
+            path = os.path.join(MEDIA_PATH, folder, f"{pokemon.id}.png")
+
+            if os.path.isfile(path):
+                src_path = path
+                break
+
+        if src_path is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Kein Artwork vorhanden",
+            )
+
+        png_bytes = voice.render_display_image(
+            src_path, f"{folder}-{pokemon.id}"
+        )
+
+        return Response(content=png_bytes, media_type="image/png")
+
+    finally:
+        db.close()
+
+
 app.mount(
     "/",
     StaticFiles(directory=STATIC_PATH, html=True),

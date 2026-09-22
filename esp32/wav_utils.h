@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+#include "esp_heap_caps.h"
+
 inline std::string build_wav_body(const std::vector<uint8_t> &pcm,
                                    uint32_t sample_rate = 16000,
                                    uint16_t channels = 1,

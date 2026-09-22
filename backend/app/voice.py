@@ -15,6 +15,7 @@ absent; callers should catch VoiceUnavailable and turn it into a 503.
 import hashlib
 import io
 import os
+import re
 import subprocess
 import wave
 
@@ -37,9 +38,38 @@ SAMPLE_RATE = 16000
 
 TTS_CACHE_PATH = os.path.join(MEDIA_PATH, "tts")
 CRIES_WAV_CACHE_PATH = os.path.join(MEDIA_PATH, "cries_wav")
+DISPLAY_CACHE_PATH = os.path.join(MEDIA_PATH, "display")
+
+# The ESP32's GC9A01 panel is 240x240; images are pre-scaled to exactly that.
+DISPLAY_SIZE = 240
 
 os.makedirs(TTS_CACHE_PATH, exist_ok=True)
 os.makedirs(CRIES_WAV_CACHE_PATH, exist_ok=True)
+os.makedirs(DISPLAY_CACHE_PATH, exist_ok=True)
+
+# Piper's German espeak phonemizer reads "ch" as in "Bach", which mangles
+# names whose "ch" comes from Japanese/English/Spanish ("Pikachu" ->
+# "Pika-chu"). Respelled phonetically before synthesis. Deliberately an
+# explicit list, not a "ch" -> "tsch" rule: many German names (Nachtara,
+# Sichlor, Lichtel, ...) need the German "ch".
+PRONUNCIATION_DE = {
+    "Pikachu": "Pikatschu",
+    "Raichu": "Raitschu",
+    "Pichu": "Pitschu",
+    "Jirachi": "Dschiratschi",
+    "Pachirisu": "Patschirisu",
+    "Machollo": "Matschollo",
+    "Machomei": "Matschomei",
+    "Nockchan": "Nocktschan",
+    "Puponcho": "Pupontscho",
+    "Picochilla": "Picotschilla",
+    "Mortcha": "Morttscha",
+    "Fatalitcha": "Fatalittscha",
+}
+
+_PRONUNCIATION_RE = re.compile(
+    r"\b(" + "|".join(map(re.escape, PRONUNCIATION_DE)) + r")\b"
+)
 
 _whisper_model = None
 _piper_voice = None
@@ -140,6 +170,9 @@ def transcribe_wav(wav_bytes: bytes) -> str:
 
 def synthesize_tts(text: str) -> bytes:
     """Synthesize German text to a cached 16kHz mono 16-bit PCM WAV."""
+    # Applied before hashing, so editing PRONUNCIATION_DE regenerates the
+    # affected cache entries instead of serving stale audio.
+    text = _PRONUNCIATION_RE.sub(lambda m: PRONUNCIATION_DE[m.group(1)], text)
     cache_key = hashlib.sha256(text.encode("utf-8")).hexdigest()
     cache_path = os.path.join(TTS_CACHE_PATH, f"{cache_key}.wav")
 
@@ -240,3 +273,51 @@ def transcode_cry_to_wav(cry_ogg_path: str, pokemon_id: int) -> bytes:
         out_file.write(wav_bytes)
 
     return wav_bytes
+
+
+def render_display_image(src_png_path: str, cache_name: str) -> bytes:
+    """Scale artwork to a cached 240x240 opaque RGB PNG for the ESP32 display.
+
+    PokeAPI artwork is ~1MP with an alpha channel — too big for the ESP32 to
+    decode quickly, and online_image's RGB565 has no alpha — so it's scaled
+    down and flattened onto black (the display's background) here instead.
+    """
+    cache_path = os.path.join(DISPLAY_CACHE_PATH, f"{cache_name}.png")
+
+    if os.path.exists(cache_path) and os.path.getsize(cache_path) > 0:
+        with open(cache_path, "rb") as cached:
+            return cached.read()
+
+    size = f"{DISPLAY_SIZE}x{DISPLAY_SIZE}"
+
+    result = subprocess.run(
+        [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            src_png_path,
+            "-filter_complex",
+            f"color=c=black:s={size}[bg];"
+            f"[0:v]scale={DISPLAY_SIZE}:{DISPLAY_SIZE}:flags=lanczos[fg];"
+            "[bg][fg]overlay=shortest=1,format=rgb24",
+            "-frames:v",
+            "1",
+            "-c:v",
+            "png",
+            "-f",
+            "image2pipe",
+            "pipe:1",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=True,
+    )
+
+    png_bytes = result.stdout
+
+    with open(cache_path, "wb") as out_file:
+        out_file.write(png_bytes)
+
+    return png_bytes
