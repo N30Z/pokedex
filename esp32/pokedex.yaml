@@ -10,9 +10,13 @@
 # and CLAUDE.md ("Voice interface") for the backend side of this contract.
 #
 # Targets a 2025.x-era ESPHome (needs the on_data microphone callback and
-# the unified mipi_spi display platform). Requires a PSRAM-equipped board
-# (e.g. ESP32-WROVER) — mic recording, buffered WAV responses, and the
-# decoded sprite image all share that RAM budget.
+# the unified mipi_spi display platform). Targets an ESP32-S3 N16R8
+# (16MB flash / 8MB octal PSRAM) — mic recording, buffered WAV responses,
+# and the decoded sprite image all share that PSRAM budget. An N8R2
+# (2MB quad PSRAM) is tighter but should also work; change flash_size to
+# 8MB and psram.mode to quad below if using one. Plain ESP32-C3/C6 boards
+# don't work here: they have only one I2S peripheral (this design needs
+# separate mic/speaker buses) and no/too little PSRAM.
 
 esphome:
   name: pokedex-voice
@@ -21,12 +25,15 @@ esphome:
     - wav_utils.h
 
 esp32:
-  board: esp32-wrover-kit
+  variant: esp32s3
+  board: esp32s3devkitc1
+  flash_size: 16MB
   framework:
     type: esp-idf
 
 psram:
   mode: octal
+  speed: 80MHz
 
 substitutions:
   backend_base_url: !secret backend_base_url

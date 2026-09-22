@@ -15,7 +15,7 @@ toolchain.
 
 | Part | Role |
 | --- | --- |
-| ESP32 with PSRAM (e.g. ESP32-WROVER) | Main board. PSRAM is required — mic recording, buffered TTS/cry WAV responses, and the decoded sprite image all share that RAM budget. |
+| ESP32-S3 N16R8 (16MB flash / 8MB octal PSRAM) | Main board, as configured in `pokedex.yaml` (`variant: esp32s3`, `flash_size: 16MB`, `psram.mode: octal`). PSRAM is required — mic recording, buffered TTS/cry WAV responses, and the decoded sprite image all share that RAM budget. An S3 N8R2 (2MB quad PSRAM) should also work with less headroom — change `flash_size` to `8MB` and `psram.mode` to `quad`. Plain ESP32-C3/C6 don't work: only one I2S peripheral (this design needs separate mic/speaker buses) and no/too little PSRAM. |
 | INMP441 | I2S digital microphone |
 | MAX98357A | I2S amplifier + speaker |
 | GC9A01(A) | 240×240 round SPI TFT display |
