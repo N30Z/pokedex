@@ -9,6 +9,11 @@
 # 10s, before blanking the screen and returning to deep sleep. See README.md for wiring and setup,
 # and CLAUDE.md ("Voice interface") for the backend side of this contract.
 #
+# Holding the button for 10s while the board is awake toggles "Tonie mode":
+# the board stays awake (deep sleep suspended) and repeatedly records/
+# recognizes short clips, silently swapping the displayed artwork on every
+# match — no cry/TTS. See the wake_button/tonie_listen_loop scripts below.
+#
 # Targets a 2025.x-era ESPHome (needs the on_data microphone callback and
 # the unified mipi_spi display platform). Targets an ESP32-S3 N16R8
 # (16MB flash / 8MB octal PSRAM) — mic recording, buffered WAV responses,
@@ -98,6 +103,19 @@ globals:
   - id: screen_off
     type: bool
     initial_value: "false"
+  # Tonie mode: continuous listen-and-display, no cry/TTS. Persisted so a
+  # watchdog/OTA reboot while active doesn't silently drop back to normal
+  # mode (deep sleep itself is never entered while this is true, so it
+  # isn't relied on to survive that).
+  - id: tonie_mode
+    type: bool
+    restore_value: true
+    initial_value: "false"
+  # Set true by long_press_watch once its 10s delay elapses, so on_release
+  # can tell a completed hold apart from a normal short click.
+  - id: long_press_fired
+    type: bool
+    initial_value: "false"
 
 # ---- Wake button ----
 binary_sensor:
@@ -110,7 +128,15 @@ binary_sensor:
       # Same pin is the deep_sleep wakeup_pin below.
       allow_other_uses: true
     on_press:
-      - script.execute: run_pokedex_flow
+      - lambda: id(long_press_fired) = false;
+      - script.execute: long_press_watch
+    on_release:
+      - script.stop: long_press_watch
+      - if:
+          condition:
+            lambda: "return !id(long_press_fired) && !id(tonie_mode);"
+          then:
+            - script.execute: run_pokedex_flow
 
 deep_sleep:
   id: deep_sleep_ctl
@@ -344,6 +370,85 @@ script:
           id(play_buffer).clear();
           id(play_buffer).shrink_to_fit();
           id(play_offset) = 0;
+
+  # Started on every button press; on_release stops it if the button comes
+  # up before the delay elapses. Reaching the delay means a completed 10s
+  # hold, so this is what actually toggles Tonie mode.
+  - id: long_press_watch
+    then:
+      - delay: 10s
+      - lambda: |-
+          id(long_press_fired) = true;
+          id(tonie_mode) = !id(tonie_mode);
+      - if:
+          condition:
+            lambda: "return id(tonie_mode);"
+          then:
+            - lambda: |-
+                id(screen_off) = false;
+                id(status_text) = "Tonie-Modus an";
+            - component.update: gc9a01_display
+            - script.execute: tonie_listen_loop
+          else:
+            # Let the in-flight listen cycle finish cleanly before going
+            # back to the normal standby/deep-sleep cycle.
+            - script.wait: tonie_listen_loop
+            - lambda: id(screen_off) = true;
+            - component.update: gc9a01_display
+            - deep_sleep.enter: deep_sleep_ctl
+
+  # Runs the whole time Tonie mode is active: record a short clip, send it
+  # to /api/voice/recognize (same body/response handling as
+  # run_pokedex_flow), and on a match swap the artwork in silently — no
+  # cry/TTS. The last matched artwork stays on screen between recognitions.
+  - id: tonie_listen_loop
+    then:
+      - while:
+          condition:
+            lambda: "return id(tonie_mode);"
+          then:
+            - lambda: |-
+                id(mic_buffer).clear();
+                id(mic_buffer).reserve(160000);
+            - microphone.capture: mic
+            - delay: 4s
+            - microphone.stop_capture: mic
+            - wait_until:
+                condition:
+                  wifi.connected:
+                timeout: 5s
+            - http_request.post:
+                url: "${backend_base_url}/api/voice/recognize"
+                request_headers:
+                  Content-Type: audio/wav
+                body: !lambda |-
+                  return build_wav_body(id(mic_buffer));
+                capture_response: true
+                on_response:
+                  - lambda: |-
+                      id(matched_pokemon_id) = 0;
+                      json::parse_json(body, [](JsonObject root) -> bool {
+                        if (root["matched"] | false) {
+                          id(matched_pokemon_id) = root["id"] | 0;
+                        }
+                        return true;
+                      });
+            - if:
+                condition:
+                  lambda: "return id(matched_pokemon_id) != 0;"
+                then:
+                  - script.execute: tonie_show_pokemon_silent
+            - delay: 1s
+
+  - id: tonie_show_pokemon_silent
+    then:
+      # set_url starts the download; on_download_finished draws it once
+      # decoded. No cry/TTS — the previous artwork just stays up until then.
+      - online_image.set_url:
+          id: sprite_image
+          url: !lambda |-
+            return (std::string("${backend_base_url}") + "/api/pokemon/"
+                    + std::to_string(id(matched_pokemon_id)) + "/display.png");
 
 # Feeds the current WAV (play_buffer) into the speaker a chunk at a time.
 # speaker->play() only accepts as much as fits its ~500ms ring buffer and

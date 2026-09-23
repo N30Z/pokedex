@@ -19,7 +19,7 @@ toolchain.
 | INMP441 | I2S digital microphone |
 | MAX98357A | I2S amplifier + speaker |
 | GC9A01(A) | 240×240 round SPI TFT display |
-| Push button | Wakes the board from deep sleep and starts a recording |
+| Push button | Wakes the board from deep sleep, starts a recording, and (held 10s) toggles Tonie mode |
 
 ### Wiring
 
@@ -73,6 +73,23 @@ button must stay in that range.
 6. `esphome logs esp32/pokedex.yaml` to watch the flow live (WiFi connect,
    recording, recognize response, playback) — useful for confirming the
    two unverified points below actually work on your hardware.
+
+## Tonie mode
+
+Holding the button for 10 seconds while the board is awake toggles "Tonie
+mode": the board suspends deep sleep and keeps recording/recognizing
+short 4s clips back-to-back, swapping the displayed artwork on every match
+— silently, no cry/TTS. The last matched artwork just stays on screen
+between recognitions. Hold the button 10 seconds again to turn it off,
+which returns the board to its normal standby/deep-sleep cycle.
+
+Because deep sleep is suspended for as long as Tonie mode is active,
+expect meaningfully higher power draw — run the board on a mains PSU for
+extended Tonie-mode sessions rather than battery. Tonie mode can only be
+toggled while the board is already awake: the very press that wakes it
+from deep sleep always starts a normal one-shot recognition (see the
+`on_boot` comment in `pokedex.yaml`), so activate it with a second,
+10-second hold once the board is up.
 
 ## Known risks to verify on first hardware bring-up
 
