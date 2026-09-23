@@ -49,6 +49,7 @@ button must stay in that range.
 | **GC9A01** DC | GPIO9 | |
 | **GC9A01** RST | GPIO14 | |
 | **GC9A01** BLK (backlight) | tie to 3V3, if present | many modules have no BLK pin — backlight is then hardwired on |
+| **Display power switch** | GPIO8 | Drives an external MOSFET/load switch cutting the display module's own power rail (not just backlight) — active-high, HIGH = powered. Lets the display be fully powered down between recognitions instead of just showing a black frame. |
 
 ## Setup
 
@@ -108,6 +109,17 @@ from deep sleep always starts a normal one-shot recognition (see the
   method names against the ESPHome version you're building with before
   relying on them; swap for the current equivalents if the API has moved
   on.
+- **Display power sequencing.** The `display_power` GPIO switch uses
+  `restore_mode: ALWAYS_ON` specifically so it's driven high during its own
+  (early, GPIO/IO-priority) `setup()`, before the display component's later
+  `setup()` talks to the panel over SPI — including right after a
+  deep-sleep wake, which is a full restart. This ordering is an assumption
+  about ESPHome's component setup-priority scheme, not something verified
+  on real hardware; if the display stays blank after waking, check with
+  `esphome logs` whether `display_power` is actually high before the GC9A01
+  init sequence runs, and add an explicit `delay` after `switch.turn_on` (or
+  move the display's own setup later) if the MOSFET/load switch needs more
+  settling time than that gap already provides.
 
 ## Backend contract
 

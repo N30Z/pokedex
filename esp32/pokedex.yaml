@@ -6,8 +6,9 @@
 # artwork on a GC9A01 round display, plays the cry, then speaks the name
 # and description (all as WAV from the backend, via a MAX98357A I2S amp).
 # The normal artwork is then shown for 10s, the shiny one for another
-# 10s, before blanking the screen and returning to deep sleep. See README.md for wiring and setup,
-# and CLAUDE.md ("Voice interface") for the backend side of this contract.
+# 10s, before cutting the display's power and returning to deep sleep. See
+# README.md for wiring and setup, and CLAUDE.md ("Voice interface") for the
+# backend side of this contract.
 #
 # Holding the button for 10s while the board is awake toggles "Tonie mode":
 # the board stays awake (deep sleep suspended) and repeatedly records/
@@ -98,11 +99,6 @@ globals:
   - id: image_ready
     type: bool
     initial_value: "false"
-  # Blank the panel before deep sleep: the module has no BLK pin, so the
-  # backlight can't be switched off, only the pixels made black.
-  - id: screen_off
-    type: bool
-    initial_value: "false"
   # Tonie mode: continuous listen-and-display, no cry/TTS. Persisted so a
   # watchdog/OTA reboot while active doesn't silently drop back to normal
   # mode (deep sleep itself is never entered while this is true, so it
@@ -124,6 +120,20 @@ globals:
   - id: tonie_last_shown_id
     type: int
     initial_value: "0"
+
+# ---- Display power ----
+# Cuts the display module's own power rail (not just the backlight) via an
+# external MOSFET/load switch on this GPIO, active-high (HIGH = powered).
+# restore_mode: ALWAYS_ON runs as part of this switch's own (early, GPIO/IO-
+# priority) setup(), i.e. before the display component's later setup() talks
+# to it over SPI — so power is already up by the time that init sequence
+# runs, on every boot including a deep-sleep wake (which is a full restart).
+switch:
+  - platform: gpio
+    id: display_power
+    pin:
+      number: GPIO8
+    restore_mode: ALWAYS_ON
 
 # ---- Wake button ----
 binary_sensor:
@@ -227,9 +237,6 @@ display:
     # redrew while online_image was still decoding -> flicker.
     update_interval: never
     lambda: |-
-      if (id(screen_off)) {
-        return;  // auto-clear leaves the frame black
-      }
       if (id(image_ready)) {
         // Backend pre-scales to exactly 240x240: fill the whole panel.
         it.image(0, 0, id(sprite_image));
@@ -271,7 +278,6 @@ script:
           id(mic_buffer).reserve(160000);
           id(matched_pokemon_id) = 0;
           id(image_ready) = false;
-          id(screen_off) = false;
           id(status_text) = "Ich höre zu...";
       - component.update: gc9a01_display
       - microphone.capture: mic
@@ -314,8 +320,7 @@ script:
             - lambda: 'id(status_text) = "Nicht erkannt";'
             - component.update: gc9a01_display
             - delay: 2s
-      - lambda: id(screen_off) = true;
-      - component.update: gc9a01_display
+      - switch.turn_off: display_power
       - deep_sleep.enter: deep_sleep_ctl
 
   - id: show_and_speak_pokemon
@@ -393,7 +398,6 @@ script:
             lambda: "return id(tonie_mode);"
           then:
             - lambda: |-
-                id(screen_off) = false;
                 id(status_text) = "Tonie-Modus an";
                 id(tonie_last_shown_id) = 0;
             - component.update: gc9a01_display
@@ -402,8 +406,7 @@ script:
             # Let the in-flight listen cycle finish cleanly before going
             # back to the normal standby/deep-sleep cycle.
             - script.wait: tonie_listen_loop
-            - lambda: id(screen_off) = true;
-            - component.update: gc9a01_display
+            - switch.turn_off: display_power
             - deep_sleep.enter: deep_sleep_ctl
 
   # Runs the whole time Tonie mode is active: record a short clip, send it
