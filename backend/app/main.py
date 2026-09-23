@@ -141,20 +141,54 @@ def fuzzy_pokemon_ids(db, term, limit=60, threshold=0.6):
     return [pokemon_id for _, pokemon_id in scored[:limit]]
 
 
+def find_embedded_pokemon_id(db, term_lower: str):
+    """Find a Pokémon whose German name appears verbatim inside the transcript.
+
+    Handles speech that names a Pokémon mid-sentence ("Schau mal, das ist
+    ein Pikachu!") rather than just the bare name — common in Tonie mode's
+    continuous listening, unlike the original press-and-say-the-name flow.
+    Picks the longest matching name so e.g. "Nidoran" doesn't shadow
+    "Nidoranweiblich" when both would match the same text.
+    """
+    candidates = db.execute(
+        select(Pokemon.id, PokemonSpecies.german_name)
+        .join(PokemonSpecies)
+        .where(Pokemon.is_default.is_(True))
+    ).all()
+
+    matches = [
+        (pokemon_id, german_name)
+        for pokemon_id, german_name in candidates
+        if german_name and german_name.lower() in term_lower
+    ]
+
+    if not matches:
+        return None
+
+    matches.sort(key=lambda pair: len(pair[1]), reverse=True)
+
+    return matches[0][0]
+
+
 def match_transcript_to_pokemon(db, transcript: str):
     """Match a German speech transcript to a default Pokémon.
 
     German-only (unlike the text search box, which also matches English
-    names) since this only ever receives spoken German. Tries a substring
-    match first, then falls back to fuzzy_pokemon_ids's difflib scoring
-    (reused rather than duplicated) for typo/mishearing tolerance.
+    names) since this only ever receives spoken German. Tries, in order: a
+    substring match treating the transcript itself as the search term
+    (works when it's just the bare name), then the other direction via
+    find_embedded_pokemon_id (the transcript contains a full name, e.g. a
+    sentence spoken in Tonie mode), then falls back to fuzzy_pokemon_ids's
+    difflib scoring (reused rather than duplicated) for typo/mishearing
+    tolerance.
     """
     term = transcript.strip()
 
     if not term:
         return None
 
-    like = f"%{term.lower()}%"
+    term_lower = term.lower()
+    like = f"%{term_lower}%"
 
     pokemon = db.scalar(
         select(Pokemon)
@@ -167,6 +201,11 @@ def match_transcript_to_pokemon(db, transcript: str):
 
     if pokemon is not None:
         return pokemon, 1.0
+
+    embedded_id = find_embedded_pokemon_id(db, term_lower)
+
+    if embedded_id is not None:
+        return db.get(Pokemon, embedded_id), 1.0
 
     candidate_ids = fuzzy_pokemon_ids(db, term, limit=1)
 

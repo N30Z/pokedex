@@ -116,6 +116,14 @@ globals:
   - id: long_press_fired
     type: bool
     initial_value: "false"
+  # Last Pokémon id actually drawn in Tonie mode. Continuous listening
+  # re-matches the same, already-displayed Pokémon on most cycles (whoever
+  # is talking keeps saying its name); without this, every cycle would
+  # re-trigger online_image.set_url and redraw/flicker the screen for no
+  # visible change.
+  - id: tonie_last_shown_id
+    type: int
+    initial_value: "0"
 
 # ---- Wake button ----
 binary_sensor:
@@ -387,6 +395,7 @@ script:
             - lambda: |-
                 id(screen_off) = false;
                 id(status_text) = "Tonie-Modus an";
+                id(tonie_last_shown_id) = 0;
             - component.update: gc9a01_display
             - script.execute: tonie_listen_loop
           else:
@@ -435,13 +444,20 @@ script:
                       });
             - if:
                 condition:
-                  lambda: "return id(matched_pokemon_id) != 0;"
+                  lambda: |-
+                    return id(matched_pokemon_id) != 0
+                        && id(matched_pokemon_id) != id(tonie_last_shown_id);
                 then:
                   - script.execute: tonie_show_pokemon_silent
             - delay: 1s
 
   - id: tonie_show_pokemon_silent
     then:
+      # Recorded before the download even starts, so a repeat match for the
+      # same Pokémon on the next cycle (likely, since speech keeps
+      # mentioning it) is skipped by the check above instead of re-firing
+      # set_url/on_download_finished and flickering the screen again.
+      - lambda: id(tonie_last_shown_id) = id(matched_pokemon_id);
       # set_url starts the download; on_download_finished draws it once
       # decoded. No cry/TTS — the previous artwork just stays up until then.
       - online_image.set_url:
