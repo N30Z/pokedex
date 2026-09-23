@@ -43,13 +43,14 @@ button must stay in that range.
 | **MAX98357A** BCLK | GPIO15 | |
 | **MAX98357A** DIN | GPIO16 | |
 | **MAX98357A** GAIN / SD | per module default (leave floating for ~9dB gain, or tie per datasheet) |
+| **MAX98357A** VIN | prefer 5V (VBUS/battery) over the ESP32's 3.3V regulator, with bulk + ceramic decoupling right at VIN/GND — see "Display flicker during audio playback" below |
 | **GC9A01** SCK/SCL | GPIO12 | SPI clock (often labeled SCL on these modules, despite being SPI, not I2C) |
 | **GC9A01** SDA/MOSI | GPIO11 | SPI data |
 | **GC9A01** CS | GPIO10 | |
 | **GC9A01** DC | GPIO9 | |
 | **GC9A01** RST | GPIO14 | |
 | **GC9A01** BLK (backlight) | tie to 3V3, if present | many modules have no BLK pin — backlight is then hardwired on |
-| **Display power switch** | GPIO8 | Drives an external MOSFET/load switch cutting the display module's own power rail (not just backlight) — active-high, HIGH = powered. Lets the display be fully powered down between recognitions instead of just showing a black frame. |
+| **Display power switch** | GPIO8 | Drives an external MOSFET/load switch cutting the display module's own power rail (not just backlight) — active-high, HIGH = powered. Lets the display be fully powered down between recognitions instead of just showing a black frame. Prefer a high-side P-MOSFET or load-switch IC (e.g. TPS22918, AP22802) over a low-side N-MOSFET, and decouple with capacitors on the display side — see "Display flicker during audio playback" below. |
 
 ## Setup
 
@@ -120,6 +121,66 @@ from deep sleep always starts a normal one-shot recognition (see the
   init sequence runs, and add an explicit `delay` after `switch.turn_on` (or
   move the display's own setup later) if the MOSFET/load switch needs more
   settling time than that gap already provides.
+- **Display flicker during audio playback (supply rail sag).** Symptom:
+  brightness dips for a few milliseconds and snaps back, repeatedly, only
+  while the cry or a TTS clip is playing. This is not a firmware bug —
+  nothing in `show_and_speak_pokemon`/`play_remote_wav` or the 20ms speaker
+  feed `interval:` touches the display between the start of cry playback
+  and the end of description playback (no `component.update`, no GPIO
+  toggle, no repeat `online_image.set_url`), and the backlight has no GPIO
+  of its own to begin with — it's tied straight to a supply rail. The
+  likely cause is analog: the MAX98357A is a Class-D amp whose current draw
+  follows the audio waveform, and if the display (fed through the
+  `display_power` switch above) shares an insufficiently decoupled supply
+  or ground with it, every current pulse sags that rail or lifts that
+  ground just enough to dim the backlight briefly.
+
+  Diagnose before reaching for a soldering iron, stopping at the first
+  clear result:
+  1. Disconnect the speaker from the MAX98357A output and trigger a normal
+     recognition. Flicker gone → amplifier current (rail sag or ground
+     bounce) is the cause, not EMI from the I2S/SPI wiring. Still
+     flickering → look at wiring/coupling instead (shared ground path,
+     I2S wires routed next to display power/SPI).
+  2. Scope or multimeter (MIN/MAX hold) directly on the display module's
+     VCC/GND during playback; a dip past roughly 100–200mV that tracks the
+     audio confirms rail sag. Check the amplifier's VIN too.
+  3. Temporarily jumper across the `display_power` MOSFET/load switch. A
+     clearly weaker flicker points at that switch's on-resistance or a
+     ground lift (more likely with a low-side N-MOSFET).
+  4. Feed the display from a separate supply (bench PSU or a second
+     regulator, grounds joined at one point). Flicker disappearing
+     confirms rail sag.
+
+  Fix, roughly in order of impact:
+  - Power the MAX98357A from 5V (VBUS/battery) rather than the ESP32's
+    3.3V regulator, taking its current spikes off the rail that also feeds
+    the display and the ESP32 itself (the chip accepts 2.5–5.5V; 3.3V I2S
+    logic levels are fine at 5V supply).
+  - Bulk + ceramic decoupling right at the amplifier's VIN/GND: a
+    220–470µF electrolytic (≥10V) plus a 100nF ceramic in parallel.
+  - Same on the display side of the `display_power` switch: 47–100µF
+    electrolytic/tantalum + 100nF ceramic at the display module's VCC/GND,
+    plus 100nF/~10µF at the switch's input. Keep it at 100µF or below (or
+    use a soft-start load switch) — a larger cap behind the switch adds
+    inrush current at every power-on, and re-verify the display still
+    initializes reliably after a deep-sleep wake (see the sequencing point
+    above) once this is added.
+  - Star-ground the amplifier and the display/switch back to a single
+    point at the supply — don't let the speaker's return current share a
+    wire with the display's ground. This matters most with a low-side
+    N-MOSFET; a high-side P-MOSFET or a load-switch IC sidesteps it
+    entirely (see the wiring table above).
+  - Keep the amplifier's supply wiring short and twisted (VIN with GND),
+    routed away from the display's power and SPI lines.
+  - Optional, no firmware change: lower the MAX98357A's GAIN pin from its
+    floating default (9dB) to 6dB (tied to VIN) or 3dB (tied to VIN via
+    100kΩ) to reduce peak current, or use an 8Ω speaker instead of 4Ω
+    (roughly halves it).
+
+  A firmware change (e.g. lowering playback volume) could only shrink this
+  symptom in proportion to how much quieter it makes the audio — it can't
+  fix an actual supply/decoupling issue, so none is applied here.
 
 ## Backend contract
 

@@ -128,6 +128,9 @@ globals:
 # priority) setup(), i.e. before the display component's later setup() talks
 # to it over SPI — so power is already up by the time that init sequence
 # runs, on every boot including a deep-sleep wake (which is a full restart).
+# If the display flickers in sync with cry/TTS playback, that's not this
+# switch's toggling (it's only ever flipped off once, at the very end of a
+# flow) — see README.md's "Display flicker during audio playback" section.
 switch:
   - platform: gpio
     id: display_power
