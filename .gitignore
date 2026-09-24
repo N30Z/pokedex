@@ -1,12 +1,5 @@
 # Daten
-data/pokedex.db
-data/*.db
-data/*.db-*
-data/sprites/
-data/artwork/
-data/artwork-shiny/
-data/shiny/
-data/cries/
+data/
 
 # Voice-Modelle (per backend/scripts/download_models.sh geladen)
 models/
