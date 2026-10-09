@@ -4,6 +4,7 @@ import os
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 
@@ -546,6 +547,11 @@ def get_pokemon_display_image(identifier: str, shiny: bool = False):
 
     finally:
         db.close()
+
+
+@app.get("/voice")
+def voice_page():
+    return FileResponse(os.path.join(STATIC_PATH, "voice.html"))
 
 
 app.mount(

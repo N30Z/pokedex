@@ -40,6 +40,12 @@ body {
   letter-spacing: 0.02em;
 }
 
+.voice-link {
+  font-size: 1.4rem;
+  text-decoration: none;
+  line-height: 1;
+}
+
 #search {
   flex: 1 1 320px;
   max-width: 420px;

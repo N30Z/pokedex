@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pokédex – Sprachsuche</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="voice.css" />
+
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#232a4a" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Pokédex" />
+</head>
+<body>
+  <header class="topbar">
+    <h1><a href="/" class="topbar-link">Pokédex</a></h1>
+    <span class="voice-topbar-label">Sprachsuche</span>
+  </header>
+
+  <main class="voice-main">
+    <div class="voice-sprite-frame">
+      <img id="voice-sprite" class="voice-sprite" src="" alt="" hidden />
+      <span id="voice-placeholder" class="voice-placeholder">?</span>
+    </div>
+
+    <p id="voice-name" class="voice-name" hidden></p>
+    <p id="voice-status" class="voice-status">Bereit.</p>
+    <p id="voice-transcript" class="voice-transcript"></p>
+
+    <button id="voice-mic" class="voice-mic" aria-label="Aufnahme starten">
+      <span class="voice-mic-icon">🎤</span>
+    </button>
+
+    <div class="voice-tonie-row">
+      <label class="voice-switch">
+        <input type="checkbox" id="voice-tonie-toggle" />
+        <span class="voice-switch-track"><span class="voice-switch-thumb"></span></span>
+      </label>
+      <span class="voice-tonie-label">Tonie-Modus (durchgehend zuhören)</span>
+    </div>
+  </main>
+
+  <script src="voice.js"></script>
+</body>
+</html>

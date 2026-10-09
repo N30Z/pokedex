@@ -1,4 +1,4 @@
-const CACHE_VERSION = "v4";
+const CACHE_VERSION = "v5";
 const CACHE_NAME = `pokedex-shell-${CACHE_VERSION}`;
 
 const APP_SHELL = [
@@ -6,6 +6,9 @@ const APP_SHELL = [
   "/index.html",
   "/style.css",
   "/app.js",
+  "/voice.html",
+  "/voice.css",
+  "/voice.js",
   "/manifest.json",
   "/offline.html",
   "/icons/icon-192.png",
